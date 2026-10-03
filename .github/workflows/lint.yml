@@ -1,0 +1,83 @@
+name: Lint & Types
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+  workflow_dispatch:
+
+concurrency:
+  group: lint-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  ruff:
+    name: Ruff (lint + import order)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install tooling
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install .[dev]
+
+      - name: Ruff check
+        run: ruff check . --output-format=github
+
+  mypy:
+    name: mypy (static types)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install tooling
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install .[dev]
+
+      - name: Run mypy
+        run: mypy synapr
+
+  static-assets:
+    name: Dashboard assets
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Syntax-check dashboard JavaScript
+        run: node --check synapr/web/static/app.js
+
+      - name: Ensure the dashboard stays 100% local (no external assets)
+        run: |
+          python - <<'PY'
+          import pathlib, re, sys
+          html = pathlib.Path("synapr/web/static/index.html").read_text(encoding="utf-8")
+          js = pathlib.Path("synapr/web/static/app.js").read_text(encoding="utf-8")
+          remote = re.findall(r"""(?:src|href)=["'](https?:)?//[^"']+""", html)
+          if remote:
+              sys.exit(f"Dashboard must not load remote assets: {remote}")
+          if re.search(r"""fetch\(\s*["']https?://""", js):
+              sys.exit("Dashboard must not call remote endpoints")
+          print("Dashboard is fully local.")
+          PY
