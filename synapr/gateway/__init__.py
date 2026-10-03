@@ -3,4 +3,4 @@
 from synapr.gateway.client import GatewayResponse, LLMGateway
 from synapr.gateway.router import ModelRouter
 
-__all__ = ["LLMGateway", "GatewayResponse", "ModelRouter"]
+__all__ = ["GatewayResponse", "LLMGateway", "ModelRouter"]

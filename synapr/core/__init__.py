@@ -14,14 +14,14 @@ from synapr.core.models import (
 )
 
 __all__ = [
-    "TaskStatus",
-    "EditorType",
-    "EditorInfo",
-    "SubTask",
     "DebateCritique",
     "DebateRound",
+    "EditorInfo",
+    "EditorType",
     "ExecutionPlan",
-    "WorktreeInstance",
-    "TestResult",
     "MergeResult",
+    "SubTask",
+    "TaskStatus",
+    "TestResult",
+    "WorktreeInstance",
 ]

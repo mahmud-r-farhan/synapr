@@ -2,6 +2,7 @@
 
 import asyncio
 from pathlib import Path
+
 from synapr.config import WorktreeConfig
 from synapr.core.models import TaskStatus
 from synapr.worktree.manager import WorktreeManager

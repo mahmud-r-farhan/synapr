@@ -1,14 +1,14 @@
 """Optical screen perception, native window telemetry, and OCR text extraction."""
 
 import ctypes
-import os
-from pathlib import Path
 import platform
 import re
-import subprocess
 import time
-from typing import Any, Dict, List, Optional, Tuple
+from pathlib import Path
+from typing import Any
+
 from pydantic import BaseModel, Field
+
 from synapr.config import PerceptionConfig
 from synapr.core.logger import logger
 
@@ -17,19 +17,19 @@ class WindowInfo(BaseModel):
     """Metadata regarding an identified GUI window."""
     handle: int
     title: str
-    bounds: Tuple[int, int, int, int] = (0, 0, 0, 0)  # x, y, width, height
+    bounds: tuple[int, int, int, int] = (0, 0, 0, 0)  # x, y, width, height
 
 
 class PerceptionResult(BaseModel):
     """Telemetry report extracted from optical window perception."""
     task_id: str
     window_found: bool = False
-    window_title: Optional[str] = None
-    detected_errors: List[str] = Field(default_factory=list)
-    detected_warnings: List[str] = Field(default_factory=list)
+    window_title: str | None = None
+    detected_errors: list[str] = Field(default_factory=list)
+    detected_warnings: list[str] = Field(default_factory=list)
     completion_detected: bool = False
     extracted_text: str = ""
-    screenshot_path: Optional[str] = None
+    screenshot_path: str | None = None
     timestamp: float = Field(default_factory=time.time)
 
 
@@ -39,10 +39,10 @@ class WindowInspector:
     def __init__(self) -> None:
         self.is_windows = platform.system() == "Windows"
 
-    def find_ide_windows(self, keywords: Optional[List[str]] = None) -> List[WindowInfo]:
+    def find_ide_windows(self, keywords: list[str] | None = None) -> list[WindowInfo]:
         """Find open windows matching target keywords (e.g. 'Code', 'Cursor', task id)."""
         targets = [k.lower() for k in (keywords or ["code", "cursor", "studio", "windsurf", "synapr"])]
-        found: List[WindowInfo] = []
+        found: list[WindowInfo] = []
 
         if self.is_windows:
             found.extend(self._find_windows_win32(targets))
@@ -52,9 +52,9 @@ class WindowInspector:
 
         return found
 
-    def _find_windows_win32(self, targets: List[str]) -> List[WindowInfo]:
+    def _find_windows_win32(self, targets: list[str]) -> list[WindowInfo]:
         """Enumerate top-level Windows GUI windows using User32 ctypes."""
-        results: List[WindowInfo] = []
+        results: list[WindowInfo] = []
         user32 = ctypes.windll.user32
 
         WNDENUMPROC = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_void_p)
@@ -85,7 +85,7 @@ class WindowInspector:
         user32.EnumWindows(cb, 0)
         return results
 
-    def _find_windows_generic(self, targets: List[str]) -> List[WindowInfo]:
+    def _find_windows_generic(self, targets: list[str]) -> list[WindowInfo]:
         """Generic fallback for non-Windows platforms."""
         return []
 
@@ -98,7 +98,7 @@ class ScreenCapturer:
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.is_windows = platform.system() == "Windows"
 
-    def capture_window(self, window: WindowInfo, task_id: str) -> Optional[str]:
+    def capture_window(self, window: WindowInfo, task_id: str) -> str | None:
         """Capture screenshot of the specified window and write to local disk."""
         filename = f"{task_id}_{int(time.time())}.bmp"
         filepath = self.output_dir / filename
@@ -168,10 +168,10 @@ class OCRContextEngine:
         re.compile(r"\b100%\s+passed\b", re.IGNORECASE),
     ]
 
-    def parse_text(self, raw_text: str) -> Dict[str, Any]:
+    def parse_text(self, raw_text: str) -> dict[str, Any]:
         """Extract structured errors, warnings, and completion state from text."""
-        errors: List[str] = []
-        warnings: List[str] = []
+        errors: list[str] = []
+        warnings: list[str] = []
         is_success = False
 
         for line in raw_text.splitlines():
@@ -205,13 +205,13 @@ class OCRContextEngine:
 class OpticalPerceptionEngine:
     """Coordinates screen inspection, window tracking, and error parsing."""
 
-    def __init__(self, config: Optional[PerceptionConfig] = None) -> None:
+    def __init__(self, config: PerceptionConfig | None = None) -> None:
         self.config = config or PerceptionConfig()
         self.inspector = WindowInspector()
         self.capturer = ScreenCapturer(self.config.screenshot_dir)
         self.ocr = OCRContextEngine()
 
-    async def inspect_task_window(self, task_id: str, editor_hint: Optional[str] = None) -> PerceptionResult:
+    async def inspect_task_window(self, task_id: str, editor_hint: str | None = None) -> PerceptionResult:
         """Inspect the open IDE window corresponding to a task."""
         keywords = [task_id, editor_hint or "code", "synapr"]
         windows = self.inspector.find_ide_windows(keywords)

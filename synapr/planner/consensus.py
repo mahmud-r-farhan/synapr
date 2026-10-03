@@ -3,8 +3,9 @@
 import asyncio
 import json
 import re
-from typing import Any, Dict, List, Optional
 import uuid
+from typing import Any
+
 from synapr.core.events import bus
 from synapr.core.logger import logger
 from synapr.core.models import (
@@ -49,8 +50,8 @@ class ConsensusEngine:
 
     def __init__(
         self,
-        gateway: Optional[LLMGateway] = None,
-        router: Optional[ModelRouter] = None,
+        gateway: LLMGateway | None = None,
+        router: ModelRouter | None = None,
     ) -> None:
         self.gateway = gateway or LLMGateway()
         self.router = router or ModelRouter(self.gateway.config)
@@ -58,12 +59,12 @@ class ConsensusEngine:
     async def verify_plan(
         self,
         goal: str,
-        subtasks: List[SubTask],
+        subtasks: list[SubTask],
         max_rounds: int = 2,
     ) -> ExecutionPlan:
         """Run multi-LLM debate rounds on the proposed subtasks until consensus is reached."""
         plan_id = f"plan-{uuid.uuid4().hex[:8]}"
-        debate_rounds: List[DebateRound] = []
+        debate_rounds: list[DebateRound] = []
         current_subtasks = list(subtasks)
         final_score = 1.0
 
@@ -112,7 +113,7 @@ class ConsensusEngine:
             final_consensus_score=final_score,
         )
 
-    async def _run_critics(self, proposal: str) -> List[DebateCritique]:
+    async def _run_critics(self, proposal: str) -> list[DebateCritique]:
         """Gather critiques from peer critic models asynchronously."""
         critic_roles = [
             ("Architectural Reviewer", 0),
@@ -143,7 +144,7 @@ class ConsensusEngine:
         tasks = [_query_single_critic(role, idx) for role, idx in critic_roles]
         return await asyncio.gather(*tasks)
 
-    async def _run_arbiter(self, proposal: str, critiques: List[DebateCritique]) -> Dict[str, Any]:
+    async def _run_arbiter(self, proposal: str, critiques: list[DebateCritique]) -> dict[str, Any]:
         """Query arbiter to synthesize proposal and critiques into final verdict."""
         critique_summaries = "\n\n".join(
             f"[{c.critic_role} ({c.model_name}) - Verdict: {c.verdict}]\n"
@@ -164,7 +165,7 @@ class ConsensusEngine:
         )
         return self._parse_json(resp.content)
 
-    def _format_proposal(self, goal: str, subtasks: List[SubTask]) -> str:
+    def _format_proposal(self, goal: str, subtasks: list[SubTask]) -> str:
         tasks_fmt = []
         for t in subtasks:
             tasks_fmt.append(
@@ -176,7 +177,7 @@ class ConsensusEngine:
             )
         return f"Feature Goal: {goal}\n\nProposed Subtasks:\n" + "\n".join(tasks_fmt)
 
-    def _parse_json(self, text: str) -> Dict[str, Any]:
+    def _parse_json(self, text: str) -> dict[str, Any]:
         text = text.strip()
         try:
             return json.loads(text)

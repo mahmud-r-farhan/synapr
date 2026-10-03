@@ -1,6 +1,6 @@
 """Editor registry for resolving, querying, and managing editor profiles."""
 
-from typing import Dict, List, Optional
+
 from synapr.core.logger import logger
 from synapr.core.models import EditorInfo, EditorType
 from synapr.discovery.detector import EditorDetector
@@ -9,9 +9,9 @@ from synapr.discovery.detector import EditorDetector
 class EditorRegistry:
     """Registry maintaining available editors and mapping tasks to optimal tools."""
 
-    def __init__(self, detector: Optional[EditorDetector] = None) -> None:
+    def __init__(self, detector: EditorDetector | None = None) -> None:
         self.detector = detector or EditorDetector()
-        self._editors: Dict[str, EditorInfo] = {}
+        self._editors: dict[str, EditorInfo] = {}
         self._refresh()
 
     def _refresh(self) -> None:
@@ -19,11 +19,11 @@ class EditorRegistry:
         items = self.detector.discover_all()
         self._editors = {e.id: e for e in items}
 
-    def list_available(self) -> List[EditorInfo]:
+    def list_available(self) -> list[EditorInfo]:
         """Return all discovered and available editors."""
         return list(self._editors.values())
 
-    def get_editor(self, editor_id: str) -> Optional[EditorInfo]:
+    def get_editor(self, editor_id: str) -> EditorInfo | None:
         """Fetch editor info by identifier."""
         if editor_id in self._editors:
             return self._editors[editor_id]
@@ -41,9 +41,9 @@ class EditorRegistry:
 
     def resolve_best_editor(
         self,
-        requested: Optional[str] = None,
-        task_tags: Optional[List[str]] = None,
-        file_scopes: Optional[List[str]] = None,
+        requested: str | None = None,
+        task_tags: list[str] | None = None,
+        file_scopes: list[str] | None = None,
     ) -> EditorInfo:
         """Resolve the best editor for a given task, falling back gracefully."""
         # 1. Exact match requested

@@ -1,9 +1,9 @@
 """Automated build and test suite execution within isolated worktrees."""
 
 import asyncio
-from pathlib import Path
 import time
-from typing import Dict, List, Optional
+from pathlib import Path
+
 from synapr.core.events import bus
 from synapr.core.logger import logger
 from synapr.core.models import SubTask, TaskStatus, TestResult, WorktreeInstance
@@ -14,7 +14,7 @@ class TestPipeline:
 
     __test__ = False
 
-    def __init__(self, default_command: Optional[str] = None) -> None:
+    def __init__(self, default_command: str | None = None) -> None:
         self.default_command = default_command
 
     def auto_detect_command(self, worktree_path: str) -> str:
@@ -36,7 +36,7 @@ class TestPipeline:
         self,
         worktree: WorktreeInstance,
         task: SubTask,
-        custom_command: Optional[str] = None,
+        custom_command: str | None = None,
     ) -> TestResult:
         """Execute the test command inside the worktree directory asynchronously."""
         cmd_str = custom_command or task.test_command or self.auto_detect_command(worktree.path)

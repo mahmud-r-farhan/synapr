@@ -2,4 +2,4 @@
 
 from synapr.dispatcher.bridge import DispatcherError, TaskDispatcher
 
-__all__ = ["TaskDispatcher", "DispatcherError"]
+__all__ = ["DispatcherError", "TaskDispatcher"]

@@ -3,7 +3,7 @@
 import json
 import os
 from pathlib import Path
-from typing import Dict, List, Optional
+
 from pydantic import BaseModel, Field
 
 
@@ -15,17 +15,17 @@ class GatewayConfig(BaseModel):
     )
     ollama_base_url: str = Field(default="http://localhost:11434")
     openai_base_url: str = Field(default="https://api.openai.com/v1")
-    openai_api_key: Optional[str] = Field(default=None)
-    openrouter_api_key: Optional[str] = Field(default=None)
-    groq_api_key: Optional[str] = Field(default=None)
-    
+    openai_api_key: str | None = Field(default=None)
+    openrouter_api_key: str | None = Field(default=None)
+    groq_api_key: str | None = Field(default=None)
+
     # Models assigned to specific roles
     planner_model: str = Field(default="qwen2.5-coder:7b")
-    critic_models: List[str] = Field(default_factory=lambda: ["llama3.2:latest", "mistral:latest"])
+    critic_models: list[str] = Field(default_factory=lambda: ["llama3.2:latest", "mistral:latest"])
     arbiter_model: str = Field(default="qwen2.5-coder:7b")
     resolver_model: str = Field(default="qwen2.5-coder:7b")
     vision_model: str = Field(default="llava:latest")
-    
+
     timeout_seconds: float = Field(default=60.0)
     temperature: float = Field(default=0.2)
     max_tokens: int = Field(default=4096)
@@ -42,8 +42,8 @@ class WorktreeConfig(BaseModel):
 
 class EditorConfig(BaseModel):
     """Configuration for IDE detection and dispatch."""
-    preferred_editor: Optional[str] = Field(default=None)
-    editor_overrides: Dict[str, str] = Field(
+    preferred_editor: str | None = Field(default=None)
+    editor_overrides: dict[str, str] = Field(
         default_factory=lambda: {
             "backend": "vscode",
             "frontend": "cursor",
@@ -51,7 +51,7 @@ class EditorConfig(BaseModel):
             "mobile": "android_studio",
         }
     )
-    custom_editor_paths: Dict[str, str] = Field(default_factory=dict)
+    custom_editor_paths: dict[str, str] = Field(default_factory=dict)
     launch_detached: bool = Field(default=True)
 
 
@@ -69,7 +69,7 @@ class PipelineConfig(BaseModel):
     auto_test: bool = Field(default=True)
     auto_merge: bool = Field(default=True)
     max_self_healing_attempts: int = Field(default=3)
-    default_test_command: Optional[str] = Field(default=None)
+    default_test_command: str | None = Field(default=None)
     allow_force_merge: bool = Field(default=False)
 
 
@@ -83,7 +83,7 @@ class SynaprConfig(BaseModel):
     pipeline: PipelineConfig = Field(default_factory=PipelineConfig)
 
     @classmethod
-    def load(cls, config_path: Optional[str] = None) -> "SynaprConfig":
+    def load(cls, config_path: str | None = None) -> "SynaprConfig":
         """Load configuration from a file or discover in project/home directories."""
         candidates = [
             Path(config_path) if config_path else None,

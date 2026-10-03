@@ -1,8 +1,9 @@
 """Pytest configuration and common fixtures."""
 
-import os
 from pathlib import Path
+
 import pytest
+
 from synapr.config import SynaprConfig
 from synapr.orchestrator import SynaprOrchestrator
 

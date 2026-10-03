@@ -1,6 +1,7 @@
 """Unit tests for Click CLI commands."""
 
 from click.testing import CliRunner
+
 from synapr.cli.main import main
 
 

@@ -1,8 +1,8 @@
 """Unit tests for configuration loading and validation."""
 
-import os
 from pathlib import Path
-from synapr.config import GatewayConfig, SynaprConfig, WorktreeConfig
+
+from synapr.config import SynaprConfig
 
 
 def test_default_config() -> None:

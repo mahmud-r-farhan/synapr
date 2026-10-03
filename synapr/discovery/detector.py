@@ -5,7 +5,7 @@ import platform
 import shutil
 import subprocess
 from pathlib import Path
-from typing import Dict, List, Optional
+
 from synapr.core.logger import logger
 from synapr.core.models import EditorInfo, EditorType
 
@@ -172,13 +172,13 @@ class EditorDetector:
         },
     ]
 
-    def __init__(self, custom_overrides: Optional[Dict[str, str]] = None) -> None:
+    def __init__(self, custom_overrides: dict[str, str] | None = None) -> None:
         self.custom_overrides = custom_overrides or {}
         self.os_name = platform.system().lower()
 
-    def discover_all(self) -> List[EditorInfo]:
+    def discover_all(self) -> list[EditorInfo]:
         """Scan the host system and return all discovered editors."""
-        discovered: List[EditorInfo] = []
+        discovered: list[EditorInfo] = []
 
         for candidate in self.KNOWN_EDITORS:
             info = self._check_candidate(candidate)
@@ -203,7 +203,7 @@ class EditorDetector:
         logger.info(f"Discovered {len(discovered)} installed code editors on {platform.system()}")
         return discovered
 
-    def find_editor(self, editor_id: str) -> Optional[EditorInfo]:
+    def find_editor(self, editor_id: str) -> EditorInfo | None:
         """Find a specific editor by identifier."""
         # 1. Check custom overrides
         if editor_id in self.custom_overrides:
@@ -236,7 +236,7 @@ class EditorDetector:
 
         return None
 
-    def _check_candidate(self, candidate: Dict) -> Optional[EditorInfo]:
+    def _check_candidate(self, candidate: dict) -> EditorInfo | None:
         """Check if an editor candidate exists via PATH or standard directories."""
         # 1. Check PATH
         for exe in candidate["executables"]:
@@ -254,7 +254,7 @@ class EditorDetector:
                 )
 
         # 2. Check OS-specific standard directories
-        paths_to_check: List[str] = []
+        paths_to_check: list[str] = []
         if self.os_name == "windows":
             paths_to_check = candidate.get("windows_paths", [])
         elif self.os_name == "darwin":
@@ -294,7 +294,7 @@ class EditorDetector:
 
         return None
 
-    def _get_version(self, executable: str, flag: Optional[str]) -> Optional[str]:
+    def _get_version(self, executable: str, flag: str | None) -> str | None:
         """Attempt to extract version string from executable without blocking."""
         if not flag:
             return None

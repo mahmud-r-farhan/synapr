@@ -2,11 +2,10 @@
 
 import asyncio
 from pathlib import Path
-import re
-from typing import List, Optional
+
 from synapr.core.events import bus
 from synapr.core.logger import logger
-from synapr.core.models import MergeResult, SubTask, TaskStatus, WorktreeInstance
+from synapr.core.models import MergeResult, SubTask, WorktreeInstance
 from synapr.gateway.router import ModelRouter
 from synapr.merger.pipeline import TestPipeline
 
@@ -25,15 +24,15 @@ class SelfHealingResolver:
 
     def __init__(
         self,
-        repo_root: Optional[str] = None,
-        router: Optional[ModelRouter] = None,
-        pipeline: Optional[TestPipeline] = None,
+        repo_root: str | None = None,
+        router: ModelRouter | None = None,
+        pipeline: TestPipeline | None = None,
     ) -> None:
         self.repo_root = Path(repo_root or ".").resolve()
         self.router = router or ModelRouter()
         self.pipeline = pipeline or TestPipeline()
 
-    async def _run_git(self, args: List[str]) -> Tuple_Run:
+    async def _run_git(self, args: list[str]) -> tuple[int, str, str]:
         """Run git command in main repository root."""
         cmd = ["git"] + args
         proc = await asyncio.create_subprocess_exec(
@@ -187,7 +186,7 @@ class SelfHealingResolver:
 
     async def _resolve_file_conflict(
         self, file_name: str, conflict_text: str, task_info: str
-    ) -> Optional[str]:
+    ) -> str | None:
         """Prompt the resolver LLM to output conflict-free merged code."""
         prompt = (
             f"File: {file_name}\n"
@@ -217,7 +216,3 @@ class SelfHealingResolver:
             return None
 
         return clean
-
-
-# Helper type
-Tuple_Run = tuple[int, str, str]

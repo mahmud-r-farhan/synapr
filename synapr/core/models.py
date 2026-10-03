@@ -1,8 +1,9 @@
 """Domain models for Synapr multi-IDE swarm orchestration."""
 
-from enum import Enum
 import time
-from typing import Any, Dict, List, Optional
+from enum import Enum
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 
@@ -48,10 +49,10 @@ class EditorInfo(BaseModel):
     name: str
     editor_type: EditorType
     executable_path: str
-    version: Optional[str] = None
-    launch_args_template: List[str] = Field(default_factory=lambda: ["{path}"])
+    version: str | None = None
+    launch_args_template: list[str] = Field(default_factory=lambda: ["{path}"])
     is_available: bool = True
-    description: Optional[str] = None
+    description: str | None = None
 
 
 class SubTask(BaseModel):
@@ -60,17 +61,17 @@ class SubTask(BaseModel):
     title: str
     description: str
     target_editor: str = "vscode"
-    file_scope: List[str] = Field(default_factory=list)
-    dependencies: List[str] = Field(default_factory=list)
+    file_scope: list[str] = Field(default_factory=list)
+    dependencies: list[str] = Field(default_factory=list)
     instructions: str = ""
-    test_command: Optional[str] = None
-    worktree_path: Optional[str] = None
-    branch_name: Optional[str] = None
+    test_command: str | None = None
+    worktree_path: str | None = None
+    branch_name: str | None = None
     status: TaskStatus = TaskStatus.PENDING
-    assigned_agent: Optional[str] = None
+    assigned_agent: str | None = None
     created_at: float = Field(default_factory=time.time)
     updated_at: float = Field(default_factory=time.time)
-    metadata: Dict[str, Any] = Field(default_factory=dict)
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class DebateCritique(BaseModel):
@@ -78,8 +79,8 @@ class DebateCritique(BaseModel):
     critic_role: str
     model_name: str
     criticism: str
-    risks_identified: List[str] = Field(default_factory=list)
-    suggested_modifications: List[str] = Field(default_factory=list)
+    risks_identified: list[str] = Field(default_factory=list)
+    suggested_modifications: list[str] = Field(default_factory=list)
     verdict: str = "APPROVED"  # APPROVED | REVISE_REQUIRED | REJECTED
 
 
@@ -87,7 +88,7 @@ class DebateRound(BaseModel):
     """A round of multi-model debate on an orchestration plan."""
     round_number: int
     plan_proposal: str
-    critiques: List[DebateCritique] = Field(default_factory=list)
+    critiques: list[DebateCritique] = Field(default_factory=list)
     synthesis: str = ""
     consensus_score: float = 1.0  # 0.0 to 1.0
     approved: bool = True
@@ -98,12 +99,12 @@ class ExecutionPlan(BaseModel):
     """The complete verified plan approved through multi-LLM debate."""
     id: str
     goal: str
-    subtasks: List[SubTask] = Field(default_factory=list)
-    debate_rounds: List[DebateRound] = Field(default_factory=list)
+    subtasks: list[SubTask] = Field(default_factory=list)
+    debate_rounds: list[DebateRound] = Field(default_factory=list)
     final_consensus_score: float = 1.0
     base_branch: str = "master"
     created_at: float = Field(default_factory=time.time)
-    metadata: Dict[str, Any] = Field(default_factory=dict)
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class WorktreeInstance(BaseModel):
@@ -115,7 +116,7 @@ class WorktreeInstance(BaseModel):
     status: TaskStatus = TaskStatus.PROVISIONED
     created_at: float = Field(default_factory=time.time)
     is_locked: bool = False
-    process_pid: Optional[int] = None
+    process_pid: int | None = None
 
 
 class TestResult(BaseModel):
@@ -136,6 +137,6 @@ class MergeResult(BaseModel):
     feature_branch: str
     success: bool
     had_conflicts: bool = False
-    conflicted_files: List[str] = Field(default_factory=list)
+    conflicted_files: list[str] = Field(default_factory=list)
     self_healed: bool = False
     message: str = ""

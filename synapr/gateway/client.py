@@ -2,9 +2,11 @@
 
 import asyncio
 import json
+import os
 import urllib.error
 import urllib.request
-from typing import Any, Dict, List, Optional
+from typing import Any
+
 from synapr.config import GatewayConfig
 from synapr.core.logger import logger
 
@@ -24,17 +26,17 @@ class GatewayResponse:
 class LLMGateway:
     """Unified client for Ollama, OpenAI-compatible APIs, and offline deterministic simulation."""
 
-    def __init__(self, config: Optional[GatewayConfig] = None) -> None:
+    def __init__(self, config: GatewayConfig | None = None) -> None:
         self.config = config or GatewayConfig()
 
     async def complete(
         self,
         prompt: str,
-        system_prompt: Optional[str] = None,
-        model: Optional[str] = None,
-        provider: Optional[str] = None,
-        temperature: Optional[float] = None,
-        max_tokens: Optional[int] = None,
+        system_prompt: str | None = None,
+        model: str | None = None,
+        provider: str | None = None,
+        temperature: float | None = None,
+        max_tokens: int | None = None,
     ) -> GatewayResponse:
         """Execute a text completion or chat prompt across the active provider."""
         active_provider = (provider or self.config.default_provider).lower()
@@ -57,7 +59,7 @@ class LLMGateway:
             return await self._complete_mock(prompt, system_prompt, active_model)
 
     async def _complete_mock(
-        self, prompt: str, system_prompt: Optional[str], model: str
+        self, prompt: str, system_prompt: str | None, model: str
     ) -> GatewayResponse:
         """Deterministic, rich offline mock responses for local offline air-gap workflows and tests."""
         await asyncio.sleep(0.05)  # Simulate non-blocking async dispatch
@@ -158,7 +160,7 @@ class LLMGateway:
     async def _complete_ollama(
         self,
         prompt: str,
-        system_prompt: Optional[str],
+        system_prompt: str | None,
         model: str,
         temperature: float,
         max_tokens: int,
@@ -176,7 +178,7 @@ class LLMGateway:
             },
         }
 
-        def _do_request() -> Dict[str, Any]:
+        def _do_request() -> dict[str, Any]:
             data = json.dumps(payload).encode("utf-8")
             req = urllib.request.Request(
                 url,
@@ -199,7 +201,7 @@ class LLMGateway:
     async def _complete_openai_compatible(
         self,
         prompt: str,
-        system_prompt: Optional[str],
+        system_prompt: str | None,
         model: str,
         provider: str,
         temperature: float,
@@ -245,7 +247,7 @@ class LLMGateway:
             headers["HTTP-Referer"] = "https://github.com/synapr/synapr"
             headers["X-Title"] = "Synapr Orchestrator"
 
-        def _do_request() -> Dict[str, Any]:
+        def _do_request() -> dict[str, Any]:
             data = json.dumps(payload).encode("utf-8")
             req = urllib.request.Request(url, data=data, headers=headers, method="POST")
             with urllib.request.urlopen(req, timeout=self.config.timeout_seconds) as resp:

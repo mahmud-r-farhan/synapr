@@ -1,6 +1,7 @@
 """Unit tests for FastAPI endpoint handlers."""
 
 import asyncio
+
 from synapr.web.app import GoalRequest, create_plan, get_status, list_editors, list_worktrees
 
 

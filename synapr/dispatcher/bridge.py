@@ -1,29 +1,26 @@
 """IDE Injection and Worker Dispatcher bridge."""
 
-import asyncio
 import json
-import os
-from pathlib import Path
 import platform
 import subprocess
-from typing import Any, Dict, List, Optional
+from pathlib import Path
+
 from synapr.core.events import bus
 from synapr.core.logger import logger
-from synapr.core.models import EditorInfo, SubTask, TaskStatus, WorktreeInstance
+from synapr.core.models import SubTask, TaskStatus, WorktreeInstance
 from synapr.discovery.registry import EditorRegistry
 
 
 class DispatcherError(Exception):
     """Raised when IDE dispatch or instruction injection fails."""
-    pass
 
 
 class TaskDispatcher:
     """Injects contextual constraints and spawns targeted IDE processes into worktrees."""
 
-    def __init__(self, registry: Optional[EditorRegistry] = None) -> None:
+    def __init__(self, registry: EditorRegistry | None = None) -> None:
         self.registry = registry or EditorRegistry()
-        self._spawned_processes: Dict[str, subprocess.Popen] = {}
+        self._spawned_processes: dict[str, subprocess.Popen] = {}
 
     def inject_task_context(self, worktree_path: str, task: SubTask) -> None:
         """Inject instructions, .cursorrules, .vscode settings, and task metadata into the worktree."""
@@ -81,7 +78,7 @@ class TaskDispatcher:
         task: SubTask,
         detached: bool = True,
         dry_run: bool = False,
-    ) -> Optional[int]:
+    ) -> int | None:
         """Launch the targeted IDE attached directly to the worktree path."""
         # Inject instructions first
         self.inject_task_context(worktree.path, task)

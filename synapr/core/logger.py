@@ -3,7 +3,6 @@
 import logging
 import re
 import sys
-from typing import Optional
 
 # Pattern to redact API keys or authorization headers from logs
 _SECRET_PATTERNS = [

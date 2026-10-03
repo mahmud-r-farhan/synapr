@@ -2,8 +2,8 @@
 
 import asyncio
 from pathlib import Path
+
 from synapr.config import SynaprConfig
-from synapr.core.models import TaskStatus
 from synapr.orchestrator import SynaprOrchestrator
 
 

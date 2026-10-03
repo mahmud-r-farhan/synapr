@@ -1,9 +1,8 @@
 """Main Orchestrator coordinating all Synapr sub-systems into a cohesive swarm OS."""
 
-import asyncio
 from pathlib import Path
-import time
-from typing import Any, Dict, List, Optional
+from typing import Any
+
 from synapr.config import SynaprConfig
 from synapr.core.events import bus
 from synapr.core.logger import logger
@@ -23,7 +22,7 @@ from synapr.gateway.client import LLMGateway
 from synapr.gateway.router import ModelRouter
 from synapr.merger.pipeline import TestPipeline
 from synapr.merger.self_healing import SelfHealingResolver
-from synapr.perception.screen import OpticalPerceptionEngine, PerceptionResult
+from synapr.perception.screen import OpticalPerceptionEngine
 from synapr.planner.consensus import ConsensusEngine
 from synapr.planner.decomposer import TaskDecomposer
 from synapr.worktree.manager import WorktreeManager
@@ -32,7 +31,7 @@ from synapr.worktree.manager import WorktreeManager
 class SynaprOrchestrator:
     """Master operating coordinator for autonomous multi-IDE software development."""
 
-    def __init__(self, config: Optional[SynaprConfig] = None, repo_root: Optional[str] = None) -> None:
+    def __init__(self, config: SynaprConfig | None = None, repo_root: str | None = None) -> None:
         self.config = config or SynaprConfig.load()
         self.repo_root = Path(repo_root or ".").resolve()
 
@@ -52,15 +51,15 @@ class SynaprOrchestrator:
         self.resolver = SelfHealingResolver(str(self.repo_root), self.router, self.test_pipeline)
 
         # Active state
-        self.active_plan: Optional[ExecutionPlan] = None
-        self.active_worktrees: Dict[str, WorktreeInstance] = {}
-        self.task_results: Dict[str, Dict[str, Any]] = {}
+        self.active_plan: ExecutionPlan | None = None
+        self.active_worktrees: dict[str, WorktreeInstance] = {}
+        self.task_results: dict[str, dict[str, Any]] = {}
 
-    def get_installed_editors(self) -> List[EditorInfo]:
+    def get_installed_editors(self) -> list[EditorInfo]:
         """Return list of detected development tools."""
         return self.registry.list_available()
 
-    async def plan_goal(self, goal: str, context: Optional[str] = None) -> ExecutionPlan:
+    async def plan_goal(self, goal: str, context: str | None = None) -> ExecutionPlan:
         """Decompose a high-level goal and verify through multi-LLM debate."""
         logger.info(f"--- [Phase 1: Planning & Decomposition] --- Goal: '{goal}'")
         subtasks = await self.decomposer.decompose(goal, context)
@@ -75,7 +74,7 @@ class SynaprOrchestrator:
         plan: ExecutionPlan,
         dry_run: bool = False,
         launch_editors: bool = True,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Execute a verified plan across isolated worktrees, run tests, and merge."""
         logger.info(f"--- [Phase 3: Worktree Provisioning & Dispatch] --- (Plan: {plan.id})")
         bus.emit("orchestrator:execution_started", {"plan_id": plan.id, "tasks": len(plan.subtasks)})
@@ -84,7 +83,7 @@ class SynaprOrchestrator:
         tasks_to_run = plan.subtasks
 
         # 1. Provision worktrees and dispatch IDEs in parallel
-        provisioned: List[Tuple_TaskWorktree] = []
+        provisioned: list[Tuple_TaskWorktree] = []
         for task in tasks_to_run:
             try:
                 wt = await self.worktree_mgr.provision_worktree(
@@ -124,7 +123,7 @@ class SynaprOrchestrator:
 
         # 3. Test verification per worktree
         logger.info("--- [Phase 5: Automated Build & Test Suites] ---")
-        test_results: Dict[str, TestResult] = {}
+        test_results: dict[str, TestResult] = {}
         for task, wt in provisioned:
             if self.config.pipeline.auto_test:
                 t_res = await self.test_pipeline.run_tests(wt, task)
@@ -138,7 +137,7 @@ class SynaprOrchestrator:
 
         # 4. Sequential merge and self-healing
         logger.info("--- [Phase 6: Integration & Self-Healing Merge] ---")
-        merge_results: Dict[str, MergeResult] = {}
+        merge_results: dict[str, MergeResult] = {}
         if self.config.pipeline.auto_merge:
             for task, wt in provisioned:
                 # Merge if tests passed or dry run
@@ -178,10 +177,10 @@ class SynaprOrchestrator:
     async def run_goal(
         self,
         goal: str,
-        context: Optional[str] = None,
+        context: str | None = None,
         dry_run: bool = False,
         launch_editors: bool = True,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Execute end-to-end swarm loop from user goal to merged code."""
         plan = await self.plan_goal(goal, context)
         return await self.execute_plan(plan, dry_run=dry_run, launch_editors=launch_editors)

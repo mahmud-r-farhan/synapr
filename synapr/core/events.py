@@ -1,23 +1,25 @@
 """Event bus for asynchronous event handling and real-time updates."""
 
 import asyncio
-from typing import Any, Callable, Dict, List
 import time
+from collections.abc import Callable
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 
 class Event(BaseModel):
     """An event emitted during orchestration lifecycle."""
     event_type: str
-    data: Dict[str, Any] = Field(default_factory=dict)
+    data: dict[str, Any] = Field(default_factory=dict)
     timestamp: float = Field(default_factory=time.time)
 
 
 class EventBus:
     """Thread-safe and async-safe pub/sub event dispatcher."""
     def __init__(self) -> None:
-        self._listeners: Dict[str, List[Callable[[Event], Any]]] = {}
-        self._history: List[Event] = []
+        self._listeners: dict[str, list[Callable[[Event], Any]]] = {}
+        self._history: list[Event] = []
         self._max_history: int = 500
 
     def subscribe(self, event_type: str, callback: Callable[[Event], Any]) -> None:
@@ -31,7 +33,7 @@ class EventBus:
         if event_type in self._listeners and callback in self._listeners[event_type]:
             self._listeners[event_type].remove(callback)
 
-    async def emit_async(self, event_type: str, data: Dict[str, Any]) -> None:
+    async def emit_async(self, event_type: str, data: dict[str, Any]) -> None:
         """Emit an event asynchronously to all registered listeners."""
         event = Event(event_type=event_type, data=data)
         self._history.append(event)
@@ -51,7 +53,7 @@ class EventBus:
                 except Exception:
                     pass
 
-    def emit(self, event_type: str, data: Dict[str, Any]) -> None:
+    def emit(self, event_type: str, data: dict[str, Any]) -> None:
         """Synchronously emit an event (or schedule if event loop is running)."""
         try:
             loop = asyncio.get_running_loop()
@@ -67,7 +69,7 @@ class EventBus:
                     except Exception:
                         pass
 
-    def get_history(self, limit: int = 50) -> List[Event]:
+    def get_history(self, limit: int = 50) -> list[Event]:
         """Return the recent event history."""
         return self._history[-limit:]
 

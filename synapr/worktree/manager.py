@@ -1,9 +1,9 @@
 """Programmatic Git Worktree provisioning and lifecycle management."""
 
 import asyncio
-from pathlib import Path
 import shutil
-from typing import Dict, List, Optional
+from pathlib import Path
+
 from synapr.config import WorktreeConfig
 from synapr.core.logger import logger
 from synapr.core.models import TaskStatus, WorktreeInstance
@@ -11,7 +11,6 @@ from synapr.core.models import TaskStatus, WorktreeInstance
 
 class GitWorktreeError(Exception):
     """Raised when a Git worktree operation fails."""
-    pass
 
 
 class WorktreeManager:
@@ -19,14 +18,14 @@ class WorktreeManager:
 
     def __init__(
         self,
-        repo_root: Optional[str] = None,
-        config: Optional[WorktreeConfig] = None,
+        repo_root: str | None = None,
+        config: WorktreeConfig | None = None,
     ) -> None:
         self.repo_root = Path(repo_root or ".").resolve()
         self.config = config or WorktreeConfig()
         self.worktree_base = self.repo_root / self.config.worktree_root
 
-    async def _run_git(self, args: List[str], cwd: Optional[Path] = None) -> str:
+    async def _run_git(self, args: list[str], cwd: Path | None = None) -> str:
         """Execute a git command asynchronously in the specified directory."""
         work_dir = cwd or self.repo_root
         cmd = ["git"] + args
@@ -57,8 +56,8 @@ class WorktreeManager:
         self,
         task_id: str,
         editor: str = "vscode",
-        base_branch: Optional[str] = None,
-        feature_branch: Optional[str] = None,
+        base_branch: str | None = None,
+        feature_branch: str | None = None,
     ) -> WorktreeInstance:
         """Create an isolated worktree and feature branch for a task."""
         self.worktree_base.mkdir(parents=True, exist_ok=True)
@@ -98,11 +97,11 @@ class WorktreeManager:
             status=TaskStatus.PROVISIONED,
         )
 
-    async def list_worktrees(self) -> List[Dict[str, str]]:
+    async def list_worktrees(self) -> list[dict[str, str]]:
         """Query active worktrees via porcelain git interface."""
         output = await self._run_git(["worktree", "list", "--porcelain"])
-        worktrees: List[Dict[str, str]] = []
-        current: Dict[str, str] = {}
+        worktrees: list[dict[str, str]] = []
+        current: dict[str, str] = {}
 
         for line in output.splitlines():
             line = line.strip()

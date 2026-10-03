@@ -1,6 +1,7 @@
 """Unit tests for task decomposition and multi-LLM debate consensus."""
 
 import asyncio
+
 from synapr.config import GatewayConfig
 from synapr.discovery.registry import EditorRegistry
 from synapr.gateway.client import LLMGateway

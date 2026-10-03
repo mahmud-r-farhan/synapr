@@ -2,14 +2,15 @@
 
 import asyncio
 import json
-from pathlib import Path
-from typing import Any, AsyncGenerator, Dict, List, Optional
+from collections.abc import AsyncGenerator
+from typing import Any
+
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, StreamingResponse
 from pydantic import BaseModel
+
 from synapr import __version__
-from synapr.config import SynaprConfig
 from synapr.core.events import Event, bus
 from synapr.core.logger import logger
 from synapr.orchestrator import SynaprOrchestrator
@@ -34,19 +35,19 @@ orchestrator = SynaprOrchestrator()
 
 class GoalRequest(BaseModel):
     goal: str
-    context: Optional[str] = None
+    context: str | None = None
     dry_run: bool = False
     launch_editors: bool = True
 
 
 class WorktreeActionRequest(BaseModel):
-    task_id: Optional[str] = None
+    task_id: str | None = None
     force: bool = True
     delete_branch: bool = False
 
 
 @app.get("/api/status")
-async def get_status() -> Dict[str, Any]:
+async def get_status() -> dict[str, Any]:
     """Retrieve active system state, base branch, and orchestrator metrics."""
     base_branch = await orchestrator.worktree_mgr.detect_base_branch()
     worktrees = await orchestrator.worktree_mgr.list_worktrees()
@@ -64,19 +65,19 @@ async def get_status() -> Dict[str, Any]:
 
 
 @app.get("/api/editors")
-async def list_editors() -> List[Dict[str, Any]]:
+async def list_editors() -> list[dict[str, Any]]:
     """List all detected and configured code editors."""
     return [e.model_dump() for e in orchestrator.get_installed_editors()]
 
 
 @app.get("/api/worktrees")
-async def list_worktrees() -> List[Dict[str, Any]]:
+async def list_worktrees() -> list[dict[str, Any]]:
     """Query git worktree allocations."""
     return await orchestrator.worktree_mgr.list_worktrees()
 
 
 @app.post("/api/plan")
-async def create_plan(req: GoalRequest) -> Dict[str, Any]:
+async def create_plan(req: GoalRequest) -> dict[str, Any]:
     """Decompose goal and run multi-LLM debate without launching editors."""
     if not req.goal.strip():
         raise HTTPException(status_code=400, detail="Goal cannot be empty")
@@ -85,7 +86,7 @@ async def create_plan(req: GoalRequest) -> Dict[str, Any]:
 
 
 @app.post("/api/execute")
-async def execute_goal(req: GoalRequest, bg_tasks: BackgroundTasks) -> Dict[str, Any]:
+async def execute_goal(req: GoalRequest, bg_tasks: BackgroundTasks) -> dict[str, Any]:
     """Execute end-to-end swarm loop."""
     if not req.goal.strip():
         raise HTTPException(status_code=400, detail="Goal cannot be empty")
@@ -108,7 +109,7 @@ async def execute_goal(req: GoalRequest, bg_tasks: BackgroundTasks) -> Dict[str,
 
 
 @app.post("/api/worktrees/clean")
-async def cleanup_worktrees(req: WorktreeActionRequest) -> Dict[str, Any]:
+async def cleanup_worktrees(req: WorktreeActionRequest) -> dict[str, Any]:
     """Clean specific or all stale worktrees."""
     if req.task_id:
         await orchestrator.worktree_mgr.cleanup_worktree(
@@ -143,7 +144,7 @@ async def stream_events(request: Request) -> StreamingResponse:
                 try:
                     event = await asyncio.wait_for(q.get(), timeout=20.0)
                     yield f"event: {event.event_type}\ndata: {json.dumps(event.data)}\n\n"
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     # Keep-alive heartbeat ping
                     yield ": ping\n\n"
         finally:

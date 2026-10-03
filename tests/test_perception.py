@@ -1,10 +1,10 @@
 """Unit tests for optical perception and OCR context extractor."""
 
 import asyncio
+
 from synapr.perception.screen import (
     OCRContextEngine,
     OpticalPerceptionEngine,
-    ScreenCapturer,
     WindowInspector,
 )
 

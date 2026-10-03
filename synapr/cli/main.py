@@ -2,14 +2,14 @@
 
 import asyncio
 import os
-import sys
 import webbrowser
+from typing import Optional
+
 import click
 import uvicorn
+
 from synapr import __version__
 from synapr.config import SynaprConfig
-from synapr.core.logger import logger
-from synapr.core.models import TaskStatus
 from synapr.orchestrator import SynaprOrchestrator
 
 
@@ -17,7 +17,6 @@ from synapr.orchestrator import SynaprOrchestrator
 @click.version_option(version=__version__, prog_name="synapr")
 def main() -> None:
     """⚡ Synapr: Autonomous Local Multi-IDE AI Orchestrator."""
-    pass
 
 
 @main.command()
@@ -101,7 +100,6 @@ def run(goal: str, dry_run: bool, no_launch: bool, context: Optional[str]) -> No
 @main.group()
 def worktree() -> None:
     """Manage isolated Git worktrees."""
-    pass
 
 
 @worktree.command("list")
@@ -152,7 +150,7 @@ def status() -> None:
         click.echo(f"  • Active Worktrees:    {len(wts)}")
         click.echo(f"  • Discovered IDEs:     {len(eds)}")
         click.echo(f"  • Default LLM Engine:  {orchestrator.config.gateway.default_provider}")
-        click.echo(f"  • Privacy / Air-Gap:   100% Local Guard Enabled\n")
+        click.echo("  • Privacy / Air-Gap:   100% Local Guard Enabled\n")
 
     asyncio.run(_run())
 

@@ -10,10 +10,10 @@ from synapr.perception.screen import (
 )
 
 __all__ = [
+    "OCRContextEngine",
     "OpticalPerceptionEngine",
     "PerceptionResult",
-    "WindowInspector",
-    "WindowInfo",
     "ScreenCapturer",
-    "OCRContextEngine",
+    "WindowInfo",
+    "WindowInspector",
 ]

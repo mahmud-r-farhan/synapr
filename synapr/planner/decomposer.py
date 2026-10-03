@@ -2,7 +2,8 @@
 
 import json
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any
+
 from synapr.core.logger import logger
 from synapr.core.models import SubTask
 from synapr.discovery.registry import EditorRegistry
@@ -37,13 +38,13 @@ class TaskDecomposer:
 
     def __init__(
         self,
-        gateway: Optional[LLMGateway] = None,
-        registry: Optional[EditorRegistry] = None,
+        gateway: LLMGateway | None = None,
+        registry: EditorRegistry | None = None,
     ) -> None:
         self.gateway = gateway or LLMGateway()
         self.registry = registry or EditorRegistry()
 
-    async def decompose(self, goal: str, context: Optional[str] = None) -> List[SubTask]:
+    async def decompose(self, goal: str, context: str | None = None) -> list[SubTask]:
         """Decompose goal into decoupled subtasks."""
         user_prompt = f"Goal: {goal}\n"
         if context:
@@ -57,9 +58,7 @@ class TaskDecomposer:
         )
 
         subtasks_data = self._extract_json(response.content)
-        subtasks: List[SubTask] = []
-
-        available_editors = [e.id for e in self.registry.list_available()]
+        subtasks: list[SubTask] = []
 
         for item in subtasks_data.get("subtasks", []):
             # Resolve appropriate editor if target is not available or default
@@ -85,7 +84,7 @@ class TaskDecomposer:
         logger.info(f"Decomposed into {len(subtasks)} decoupled subtasks")
         return subtasks
 
-    def _extract_json(self, text: str) -> Dict[str, Any]:
+    def _extract_json(self, text: str) -> dict[str, Any]:
         """Robust JSON extraction from LLM response (handling markdown code fences)."""
         # Try raw JSON first
         text = text.strip()

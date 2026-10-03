@@ -1,6 +1,7 @@
 """Unit tests for Universal LLM Gateway and ModelRouter."""
 
 import asyncio
+
 from synapr.config import GatewayConfig
 from synapr.gateway.client import LLMGateway
 from synapr.gateway.router import ModelRouter
