@@ -1,0 +1,38 @@
+    <!-- ────────────────────────── Configuration view ────────────────────────── -->
+    <section class="view" id="view-config">
+      <div class="hero-panel slim">
+        <div class="hero-row">
+          <div>
+            <h1 class="hero-title">Visual Configuration</h1>
+            <p class="hero-sub" id="config-source">Loading configuration…</p>
+          </div>
+          <div class="action-row">
+            <button class="btn btn-ghost" id="btn-config-reload" title="Discard changes and reload from disk">↻ Reload</button>
+            <button class="btn btn-ghost" id="btn-config-reset" title="Restore built-in defaults">⟲ Defaults</button>
+            <button class="btn btn-secondary" id="btn-config-apply" title="Apply to the running process without writing a file">⚡ Apply</button>
+            <button class="btn btn-primary" id="btn-config-save" title="Apply and write synapr.config.json">💾 Save</button>
+          </div>
+        </div>
+        <div class="notice" id="config-dirty" hidden>You have unsaved changes.</div>
+        <div class="notice notice-warn" id="config-errors" hidden></div>
+      </div>
+
+      <div class="airgap-banner">
+        <span class="airgap-icon">🛡️</span>
+        <div><strong>Zero Data Leak Guarantee:</strong> All settings are applied and stored locally on your machine. No telemetry or usage data is collected or sent to Synapr.</div>
+      </div>
+
+      <div class="card provider-card">
+        <div class="provider-row">
+          <div>
+            <div class="section-title compact">🔌 Provider Connectivity</div>
+            <p class="muted small" id="provider-detail">Test the active LLM endpoint before launching a swarm.</p>
+          </div>
+          <button class="btn btn-secondary" id="btn-test-provider">🩺 Test Connection</button>
+        </div>
+      </div>
+
+      <div id="config-sections" class="config-sections">
+        <div class="card"><div class="muted">Loading configuration schema…</div></div>
+      </div>
+    </section>

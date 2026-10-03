@@ -1,0 +1,40 @@
+    <!-- ────────────────────────── GitHub Issues view ────────────────────────── -->
+    <section class="view" id="view-github">
+      <div class="hero-panel slim">
+        <div class="hero-row">
+          <div>
+            <h1 class="hero-title">🐙 GitHub Issue &amp; PR Lifecycle</h1>
+            <p class="hero-sub">
+              Sync issues from your repository, provision isolated worktrees with tailored agent briefs,
+              and auto-generate structured pull requests.
+            </p>
+          </div>
+          <div class="action-row">
+            <select id="github-state-filter" class="select" style="max-width: 130px;">
+              <option value="open">Open</option>
+              <option value="closed">Closed</option>
+              <option value="all">All</option>
+            </select>
+            <button class="btn btn-secondary" id="btn-refresh-issues">↻ Refresh Issues</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div>
+          <h2 class="section-title">📋 Repository Issues</h2>
+          <div id="github-issues-container">
+            <div class="card"><div class="muted">Loading repository issues…</div></div>
+          </div>
+        </div>
+
+        <div>
+          <div class="card sticky-panel" id="github-detail-panel">
+            <h2 class="section-title" id="github-detail-title">Issue Inspector</h2>
+            <div id="github-detail-body">
+              <p class="muted">Select an issue on the left to inspect requirements, provision an isolated worktree, or generate a pull request draft.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>

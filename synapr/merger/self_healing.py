@@ -1,5 +1,7 @@
 """Self-healing merge engine with automated LLM conflict resolution."""
 
+from __future__ import annotations
+
 import asyncio
 from pathlib import Path
 
@@ -7,11 +9,12 @@ from synapr.core.events import bus
 from synapr.core.logger import logger
 from synapr.core.models import MergeResult, SubTask, WorktreeInstance
 from synapr.gateway.router import ModelRouter
+from synapr.merger.conflict_resolution import ConflictResolutionMixin
 from synapr.merger.pipeline import TestPipeline
 
 
-class SelfHealingResolver:
-    """Automates Git branch integration and resolves merge conflicts via self-healing LLM loops."""
+class SelfHealingResolver(ConflictResolutionMixin):
+    """Integrate Git branches and repair merge conflicts through bounded retries."""
 
     RESOLVER_SYSTEM_PROMPT = (
         "You are an expert Git Conflict Resolution Specialist and Principal Engineer in Synapr.\n"
@@ -183,36 +186,3 @@ class SelfHealingResolver:
                 self_healed=False,
                 message="Self-healing reached maximum attempts without passing test suite.",
             )
-
-    async def _resolve_file_conflict(
-        self, file_name: str, conflict_text: str, task_info: str
-    ) -> str | None:
-        """Prompt the resolver LLM to output conflict-free merged code."""
-        prompt = (
-            f"File: {file_name}\n"
-            f"Context: {task_info}\n\n"
-            f"Merge Conflict Content:\n{conflict_text}\n\n"
-            "Produce the final, clean, conflict-free version of this file with zero conflict markers."
-        )
-
-        resp = await self.router.run_resolver(
-            prompt=prompt,
-            system_prompt=self.RESOLVER_SYSTEM_PROMPT,
-        )
-
-        clean = resp.content.strip()
-        # Strip potential code block formatting if LLM wrapped it
-        if clean.startswith("```"):
-            lines = clean.splitlines()
-            if lines[0].startswith("```"):
-                lines = lines[1:]
-            if lines and lines[-1].startswith("```"):
-                lines = lines[:-1]
-            clean = "\n".join(lines).strip()
-
-        # Sanity check: Ensure conflict markers were removed
-        if "<<<<<<<" in clean or "=======" in clean or ">>>>>>>" in clean:
-            logger.error(f"Resolver output still contains conflict markers for {file_name}")
-            return None
-
-        return clean

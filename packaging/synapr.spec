@@ -14,6 +14,12 @@ datas = [
 hiddenimports = [
     "synapr",
     "synapr.cli.main",
+    "synapr.cli.commands.core",
+    "synapr.cli.commands.config",
+    "synapr.cli.commands.research",
+    "synapr.cli.commands.github",
+    "synapr.cli.commands.mail",
+    "synapr.cli.commands.dashboard",
     "synapr.web.app",
     "synapr.orchestrator",
     "synapr.config",

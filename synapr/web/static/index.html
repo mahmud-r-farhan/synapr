@@ -7,6 +7,7 @@
   <!-- 100% local assets: no external fonts, CDNs or trackers are ever requested. -->
   <link rel="icon" type="image/x-icon" href="/assets/image.ico">
   <link rel="stylesheet" href="/assets/styles.css">
+  <link rel="stylesheet" href="/assets/styles-views.css">
 </head>
 <body>
   <header class="navbar">
@@ -32,294 +33,23 @@
   </header>
 
   <main class="container">
-    <!-- ───────────────────────────── Swarm view ───────────────────────────── -->
-    <section class="view is-active" id="view-swarm">
-      <div class="hero-panel">
-        <h1 class="hero-title">Local Autonomous Multi-IDE Swarm</h1>
-        <p class="hero-sub">
-          Enter a project goal. Synapr breaks it down, tests consensus via peer debate,
-          provisions isolated Git worktrees, and launches your installed editors in parallel.
-        </p>
-        <div class="input-row">
-          <input type="text" id="goal-input" class="goal-input"
-                 placeholder="e.g. Build an OAuth2 JWT authentication layer with Redis rate-limiting and unit tests">
-          <button class="btn btn-primary" id="btn-launch">🚀 Launch Swarm</button>
-          <button class="btn btn-secondary" id="btn-dry-run">🔬 Dry-Run Simulation</button>
-        </div>
-      </div>
-
-      <div class="airgap-banner">
-        <span class="airgap-icon">🔒</span>
-        <div><strong>100% Local Machine &amp; Zero Data Leak:</strong> Swarm execution and Git worktrees run strictly on your local host. Zero telemetry, code, or metrics are collected by Synapr.</div>
-      </div>
-
-      <div class="grid-2">
-        <div>
-          <h2 class="section-title">🌿 Isolated Worktrees &amp; Active Subtasks</h2>
-          <div id="tasks-container">
-            <div class="task-card">
-              <div class="task-header">
-                <div class="task-title">Awaiting project goal…</div>
-                <span class="tag tag-vscode">READY</span>
-              </div>
-              <p class="muted">
-                Provide a prompt above to trigger task decomposition and automatic worktree provisioning.
-              </p>
-            </div>
-          </div>
-
-          <h2 class="section-title mt">🧠 Multi-LLM Consensus Debate</h2>
-          <div class="card" id="debate-panel">
-            <p class="muted">No active debate rounds yet. Start a goal to see peer models challenge
-              architecture in real time.</p>
-          </div>
-        </div>
-
-        <div>
-          <h2 class="section-title">🖥️ Installed Host IDEs</h2>
-          <div class="card compact" id="editors-container">
-            <div class="muted small">Scanning host system…</div>
-          </div>
-
-          <h2 class="section-title">📡 Real-Time Swarm Telemetry</h2>
-          <div class="terminal-box" id="terminal-logs">
-            <div class="terminal-line log-info">[SYNAPR] Initializing real-time telemetry bridge…</div>
-            <div class="terminal-line log-success">[SYSTEM] Connected to local event bus. Zero external telemetry.</div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ────────────────────────── Research & Browser view ────────────────────────── -->
-    <section class="view" id="view-research">
-      <div class="hero-panel">
-        <h1 class="hero-title">Live Web Research &amp; Dev-Server Verification</h1>
-        <p class="hero-sub">
-          Search the web with zero API keys via DuckDuckGo and SearXNG, extract clean markdown from online documentation,
-          and probe local development servers for runtime build errors.
-        </p>
-        <div class="input-row">
-          <input type="text" id="search-input" class="goal-input" placeholder="e.g. FastAPI lifespan handlers vs startup events or React 19 useActionState">
-          <select id="search-engine" class="select" style="max-width: 170px;">
-            <option value="duckduckgo">DuckDuckGo</option>
-            <option value="searxng">SearXNG</option>
-          </select>
-          <button class="btn btn-primary" id="btn-search">🔍 Search Web</button>
-        </div>
-      </div>
-
-      <div class="grid-2">
-        <div>
-          <div class="card">
-            <div class="card-head-row">
-              <h2 class="section-title compact">🌐 Live Search Results</h2>
-              <span class="muted small" id="search-status-text">Ready for search query</span>
-            </div>
-            <div id="search-results-container" class="results-container">
-              <p class="muted">Enter a query above to fetch live web documentation, code examples, or research.</p>
-            </div>
-          </div>
-
-          <div class="card" id="article-reader-card" style="display: none;">
-            <div class="card-head-row">
-              <h3 class="section-title compact" id="reader-title">📄 Webpage Reader</h3>
-              <div class="action-row">
-                <button class="btn btn-ghost btn-sm" id="btn-copy-markdown">📋 Copy Markdown</button>
-                <button class="btn btn-secondary btn-sm" id="btn-feed-swarm">🚀 Feed to Swarm</button>
-                <button class="btn btn-ghost btn-sm" id="btn-close-reader">✕ Close</button>
-              </div>
-            </div>
-            <div class="reader-meta" id="reader-meta"></div>
-            <pre class="reader-content" id="reader-content"></pre>
-          </div>
-        </div>
-
-        <div>
-          <div class="card">
-            <h2 class="section-title">🩺 Local Dev-Server Inspector</h2>
-            <p class="muted small mb">Probe a local development server for runtime crashes, compilation errors, and response latencies.</p>
-            <div class="field">
-              <label class="field-label" for="localhost-url">Target Server URL</label>
-              <input type="text" id="localhost-url" class="input" value="http://localhost:3000">
-            </div>
-            <div class="action-row mt">
-              <button class="btn btn-secondary" id="btn-probe-localhost">🩺 Probe Server</button>
-              <button class="btn btn-ghost" id="btn-probe-8000">Test :8000</button>
-              <button class="btn btn-ghost" id="btn-probe-5173">Test :5173</button>
-            </div>
-            <div id="localhost-result-box" class="probe-box mt">
-              <div class="muted small">No inspection run yet. Click Probe Server to inspect.</div>
-            </div>
-          </div>
-
-          <div class="card">
-            <h2 class="section-title">📄 Direct Webpage Fetcher</h2>
-            <p class="muted small mb">Fetch any public URL and convert raw HTML into clean, token-efficient markdown for LLMs.</p>
-            <div class="field">
-              <label class="field-label" for="fetch-url-input">Webpage URL</label>
-              <input type="text" id="fetch-url-input" class="input" placeholder="https://docs.python.org/3/library/asyncio.html">
-            </div>
-            <div class="action-row mt">
-              <button class="btn btn-primary" id="btn-fetch-url">📄 Fetch &amp; Clean Markdown</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ────────────────────────── GitHub Issues view ────────────────────────── -->
-    <section class="view" id="view-github">
-      <div class="hero-panel slim">
-        <div class="hero-row">
-          <div>
-            <h1 class="hero-title">🐙 GitHub Issue &amp; PR Lifecycle</h1>
-            <p class="hero-sub">
-              Sync issues from your repository, provision isolated worktrees with tailored agent briefs,
-              and auto-generate structured pull requests.
-            </p>
-          </div>
-          <div class="action-row">
-            <select id="github-state-filter" class="select" style="max-width: 130px;">
-              <option value="open">Open</option>
-              <option value="closed">Closed</option>
-              <option value="all">All</option>
-            </select>
-            <button class="btn btn-secondary" id="btn-refresh-issues">↻ Refresh Issues</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="grid-2">
-        <div>
-          <h2 class="section-title">📋 Repository Issues</h2>
-          <div id="github-issues-container">
-            <div class="card"><div class="muted">Loading repository issues…</div></div>
-          </div>
-        </div>
-
-        <div>
-          <div class="card sticky-panel" id="github-detail-panel">
-            <h2 class="section-title" id="github-detail-title">Issue Inspector</h2>
-            <div id="github-detail-body">
-              <p class="muted">Select an issue on the left to inspect requirements, provision an isolated worktree, or generate a pull request draft.</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ─────────────────────────── Email Hub view ─────────────────────────── -->
-    <section class="view" id="view-email">
-      <div class="hero-panel slim">
-        <div class="hero-row">
-          <div>
-            <h1 class="hero-title">✉️ Intelligent Email Hub &amp; Safe Draft Assistant</h1>
-            <p class="hero-sub">
-              Process customer and client communications locally. AI extracts requirements and drafts technical responses.
-              Outbound transmission is protected by a mandatory safety lock.
-            </p>
-          </div>
-          <div class="action-row">
-            <select id="mail-folder-select" class="select" style="max-width: 130px;">
-              <option value="inbox">📥 Inbox</option>
-              <option value="drafts">📝 Drafts</option>
-              <option value="sent">📤 Sent</option>
-            </select>
-            <button class="btn btn-secondary" id="btn-refresh-mail">↻ Refresh</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="airgap-banner">
-        <span class="airgap-icon">🔒</span>
-        <div><strong>Mandatory Dispatch Safety Lock:</strong> Synapr isolates all generated responses to the <code>Drafts</code> directory. No email is ever sent without explicit developer authorization.</div>
-      </div>
-
-      <div class="grid-2">
-        <div>
-          <h2 class="section-title">📬 Messages</h2>
-          <div id="mail-list-container">
-            <div class="card"><div class="muted">Loading messages…</div></div>
-          </div>
-        </div>
-
-        <div>
-          <div class="card sticky-panel" id="mail-detail-panel">
-            <h2 class="section-title" id="mail-detail-title">Email Workspace</h2>
-            <div id="mail-detail-body">
-              <p class="muted">Select a message on the left to run AI triage, view requirements, or draft a safe response.</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ────────────────────────── Configuration view ────────────────────────── -->
-    <section class="view" id="view-config">
-      <div class="hero-panel slim">
-        <div class="hero-row">
-          <div>
-            <h1 class="hero-title">Visual Configuration</h1>
-            <p class="hero-sub" id="config-source">Loading configuration…</p>
-          </div>
-          <div class="action-row">
-            <button class="btn btn-ghost" id="btn-config-reload" title="Discard changes and reload from disk">↻ Reload</button>
-            <button class="btn btn-ghost" id="btn-config-reset" title="Restore built-in defaults">⟲ Defaults</button>
-            <button class="btn btn-secondary" id="btn-config-apply" title="Apply to the running process without writing a file">⚡ Apply</button>
-            <button class="btn btn-primary" id="btn-config-save" title="Apply and write synapr.config.json">💾 Save</button>
-          </div>
-        </div>
-        <div class="notice" id="config-dirty" hidden>You have unsaved changes.</div>
-        <div class="notice notice-warn" id="config-errors" hidden></div>
-      </div>
-
-      <div class="airgap-banner">
-        <span class="airgap-icon">🛡️</span>
-        <div><strong>Zero Data Leak Guarantee:</strong> All settings are applied and stored locally on your machine. No telemetry or usage data is collected or sent to Synapr.</div>
-      </div>
-
-      <div class="card provider-card">
-        <div class="provider-row">
-          <div>
-            <div class="section-title compact">🔌 Provider Connectivity</div>
-            <p class="muted small" id="provider-detail">Test the active LLM endpoint before launching a swarm.</p>
-          </div>
-          <button class="btn btn-secondary" id="btn-test-provider">🩺 Test Connection</button>
-        </div>
-      </div>
-
-      <div id="config-sections" class="config-sections">
-        <div class="card"><div class="muted">Loading configuration schema…</div></div>
-      </div>
-    </section>
-
-    <!-- ─────────────────────────── Environment view ─────────────────────────── -->
-    <section class="view" id="view-env">
-      <div class="hero-panel slim">
-        <div class="hero-row">
-          <div>
-            <h1 class="hero-title">Environment Variables</h1>
-            <p class="hero-sub">
-              Every setting can be declared as an environment variable. Values set here apply to the
-              running process immediately and can be written to a git-ignored <code>.env</code> file.
-            </p>
-          </div>
-          <div class="action-row">
-            <a class="btn btn-ghost" href="/api/config/env/example" download=".env.example">⬇ .env.example</a>
-            <label class="switch" title="Also write the variables to the project .env file">
-              <input type="checkbox" id="env-persist" checked>
-              <span>Persist to .env</span>
-            </label>
-          </div>
-        </div>
-      </div>
-      <div class="card" id="env-table-card">
-        <div class="muted">Loading environment registry…</div>
-      </div>
-    </section>
+    <!-- SYNAPR:swarm -->
+    <!-- SYNAPR:research -->
+    <!-- SYNAPR:github -->
+    <!-- SYNAPR:email -->
+    <!-- SYNAPR:config -->
+    <!-- SYNAPR:environment -->
   </main>
 
   <div class="toast-stack" id="toast-stack" aria-live="polite"></div>
   <script src="/assets/app.js"></script>
+  <script src="/assets/swarm.js"></script>
+  <script src="/assets/config-fields.js"></script>
+  <script src="/assets/config-actions.js"></script>
+  <script src="/assets/environment.js"></script>
+  <script src="/assets/research.js"></script>
+  <script src="/assets/github.js"></script>
+  <script src="/assets/email.js"></script>
+  <script src="/assets/bootstrap.js"></script>
 </body>
 </html>

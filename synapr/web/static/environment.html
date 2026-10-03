@@ -1,0 +1,24 @@
+    <!-- ─────────────────────────── Environment view ─────────────────────────── -->
+    <section class="view" id="view-env">
+      <div class="hero-panel slim">
+        <div class="hero-row">
+          <div>
+            <h1 class="hero-title">Environment Variables</h1>
+            <p class="hero-sub">
+              Every setting can be declared as an environment variable. Values set here apply to the
+              running process immediately and can be written to a git-ignored <code>.env</code> file.
+            </p>
+          </div>
+          <div class="action-row">
+            <a class="btn btn-ghost" href="/api/config/env/example" download=".env.example">⬇ .env.example</a>
+            <label class="switch" title="Also write the variables to the project .env file">
+              <input type="checkbox" id="env-persist" checked>
+              <span>Persist to .env</span>
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="card" id="env-table-card">
+        <div class="muted">Loading environment registry…</div>
+      </div>
+    </section>

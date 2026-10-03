@@ -1,0 +1,57 @@
+    <!-- ───────────────────────────── Swarm view ───────────────────────────── -->
+    <section class="view is-active" id="view-swarm">
+      <div class="hero-panel">
+        <h1 class="hero-title">Local Autonomous Multi-IDE Swarm</h1>
+        <p class="hero-sub">
+          Enter a project goal. Synapr breaks it down, tests consensus via peer debate,
+          provisions isolated Git worktrees, and launches your installed editors in parallel.
+        </p>
+        <div class="input-row">
+          <input type="text" id="goal-input" class="goal-input"
+                 placeholder="e.g. Build an OAuth2 JWT authentication layer with Redis rate-limiting and unit tests">
+          <button class="btn btn-primary" id="btn-launch">🚀 Launch Swarm</button>
+          <button class="btn btn-secondary" id="btn-dry-run">🔬 Dry-Run Simulation</button>
+        </div>
+      </div>
+
+      <div class="airgap-banner">
+        <span class="airgap-icon">🔒</span>
+        <div><strong>100% Local Machine &amp; Zero Data Leak:</strong> Swarm execution and Git worktrees run strictly on your local host. Zero telemetry, code, or metrics are collected by Synapr.</div>
+      </div>
+
+      <div class="grid-2">
+        <div>
+          <h2 class="section-title">🌿 Isolated Worktrees &amp; Active Subtasks</h2>
+          <div id="tasks-container">
+            <div class="task-card">
+              <div class="task-header">
+                <div class="task-title">Awaiting project goal…</div>
+                <span class="tag tag-vscode">READY</span>
+              </div>
+              <p class="muted">
+                Provide a prompt above to trigger task decomposition and automatic worktree provisioning.
+              </p>
+            </div>
+          </div>
+
+          <h2 class="section-title mt">🧠 Multi-LLM Consensus Debate</h2>
+          <div class="card" id="debate-panel">
+            <p class="muted">No active debate rounds yet. Start a goal to see peer models challenge
+              architecture in real time.</p>
+          </div>
+        </div>
+
+        <div>
+          <h2 class="section-title">🖥️ Installed Host IDEs</h2>
+          <div class="card compact" id="editors-container">
+            <div class="muted small">Scanning host system…</div>
+          </div>
+
+          <h2 class="section-title">📡 Real-Time Swarm Telemetry</h2>
+          <div class="terminal-box" id="terminal-logs">
+            <div class="terminal-line log-info">[SYNAPR] Initializing real-time telemetry bridge…</div>
+            <div class="terminal-line log-success">[SYSTEM] Connected to local event bus. Zero external telemetry.</div>
+          </div>
+        </div>
+      </div>
+    </section>

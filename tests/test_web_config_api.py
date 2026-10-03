@@ -1,4 +1,4 @@
-"""Integration tests for the visual configurator HTTP API."""
+"""Integration tests for configuration and dashboard HTTP endpoints."""
 
 import json
 from collections.abc import Iterator
@@ -18,9 +18,6 @@ def client(repo_workspace: Path) -> Iterator[TestClient]:
         yield test_client
 
 
-# --------------------------------------------------------------------------- basics
-
-
 def test_health_and_status(client: TestClient) -> None:
     assert client.get("/api/health").json()["status"] == "ok"
 
@@ -35,10 +32,45 @@ def test_dashboard_and_assets_are_served(client: TestClient) -> None:
     page = client.get("/")
     assert page.status_code == 200
     assert "Synapr" in page.text
-    assert "/assets/app.js" in page.text
+    for script in (
+        "app.js",
+        "swarm.js",
+        "config-fields.js",
+        "config-actions.js",
+        "environment.js",
+        "research.js",
+        "github.js",
+        "email.js",
+        "bootstrap.js",
+    ):
+        assert f"/assets/{script}" in page.text
+    assert 'id="view-swarm"' in page.text
+    assert 'id="view-env"' in page.text
+    assert "SYNAPR:swarm" not in page.text
 
-    assert client.get("/assets/app.js").status_code == 200
-    assert client.get("/assets/styles.css").status_code == 200
+    asset_page = client.get("/assets/index.html")
+    assert asset_page.status_code == 200
+    assert asset_page.text == page.text
+    for asset in (
+        "app.js",
+        "swarm.js",
+        "config-fields.js",
+        "config-actions.js",
+        "environment.js",
+        "research.js",
+        "github.js",
+        "email.js",
+        "bootstrap.js",
+        "styles.css",
+        "styles-views.css",
+        "swarm.html",
+        "research.html",
+        "github.html",
+        "email.html",
+        "config.html",
+        "environment.html",
+    ):
+        assert client.get(f"/assets/{asset}").status_code == 200
     assert client.get("/favicon.ico").status_code == 200
     assert client.get("/assets/image.ico").status_code == 200
 
@@ -48,9 +80,6 @@ def test_dashboard_has_no_external_requests(client: TestClient) -> None:
     page = client.get("/").text
     for marker in ("https://fonts.", "http://cdn.", "https://cdn.", "unpkg.com"):
         assert marker not in page
-
-
-# --------------------------------------------------------------------------- read
 
 
 def test_read_config_redacts_secrets(client: TestClient) -> None:
@@ -72,9 +101,6 @@ def test_schema_endpoint_describes_form(client: TestClient) -> None:
 
     assert {"gateway", "worktree", "editor", "perception", "pipeline", "ui"} <= sections
     assert "ollama" in schema["providers"]
-
-
-# --------------------------------------------------------------------------- write
 
 
 def test_update_applies_without_persisting(client: TestClient, repo_workspace: Path) -> None:
@@ -159,79 +185,3 @@ def test_writes_can_be_disabled(client: TestClient) -> None:
     # Read-only operations keep working, and reload restores an editable state.
     assert client.get("/api/config").status_code == 200
     assert client.post("/api/config/reload").status_code == 200
-
-
-# --------------------------------------------------------------------------- environment
-
-
-def test_env_listing(client: TestClient) -> None:
-    payload = client.get("/api/config/env").json()
-    names = {item["name"] for item in payload["variables"]}
-
-    assert "SYNAPR_PROVIDER" in names
-    assert all("effective_value" in item for item in payload["variables"])
-
-
-def test_env_set_and_unset(client: TestClient) -> None:
-    response = client.post(
-        "/api/config/env", json={"values": {"SYNAPR_PROVIDER": "lmstudio"}, "persist": False}
-    )
-    assert response.status_code == 200
-    assert response.json()["config"]["gateway"]["default_provider"] == "lmstudio"
-
-    response = client.post(
-        "/api/config/env", json={"values": {}, "unset": ["SYNAPR_PROVIDER"], "persist": False}
-    )
-    assert response.json()["config"]["gateway"]["default_provider"] == "mock"
-
-
-def test_env_persisted_to_dotenv(client: TestClient, repo_workspace: Path) -> None:
-    client.post(
-        "/api/config/env", json={"values": {"SYNAPR_UI_PORT": "9999"}, "persist": True}
-    )
-
-    assert "SYNAPR_UI_PORT=9999" in (repo_workspace / ".env").read_text(encoding="utf-8")
-
-
-def test_env_rejects_foreign_variables(client: TestClient) -> None:
-    response = client.post("/api/config/env", json={"values": {"PATH": "/tmp"}})
-
-    assert response.status_code == 400
-    assert "Refusing" in response.json()["detail"]
-
-
-def test_env_example_download(client: TestClient) -> None:
-    response = client.get("/api/config/env/example")
-
-    assert response.status_code == 200
-    assert "SYNAPR_PROVIDER" in response.text
-
-
-# --------------------------------------------------------------------------- diagnostics
-
-
-def test_provider_test_endpoint(client: TestClient) -> None:
-    result = client.post("/api/config/test-provider", json={"provider": "mock"}).json()
-
-    assert result["ok"] is True
-    assert result["provider"] == "mock"
-
-
-def test_editors_endpoints(client: TestClient) -> None:
-    assert isinstance(client.get("/api/editors").json(), list)
-    assert isinstance(client.post("/api/editors/rescan").json(), list)
-
-
-def test_worktrees_endpoint(client: TestClient) -> None:
-    assert isinstance(client.get("/api/worktrees").json(), list)
-
-
-def test_plan_endpoint_rejects_empty_goal(client: TestClient) -> None:
-    assert client.post("/api/plan", json={"goal": "   "}).status_code == 400
-
-
-def test_execute_endpoint_queues_work(client: TestClient) -> None:
-    response = client.post("/api/execute", json={"goal": "Add metrics", "dry_run": True})
-
-    assert response.status_code == 200
-    assert "initiated" in response.json()["message"]

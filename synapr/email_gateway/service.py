@@ -1,91 +1,41 @@
-"""Intelligent email processing, triage, and draft generation service."""
+"""Email triage, draft generation, and explicit safe-dispatch service."""
 
 from __future__ import annotations
 
 import datetime
-import json
 import re
 from pathlib import Path
 from typing import Any
 
 from synapr.core.logger import logger
 from synapr.email_gateway.models import EmailDraft, EmailMessage, EmailTriageResult
-
-DEFAULT_SAMPLE_MESSAGES: list[dict[str, Any]] = [
-    {
-        "id": "mail-001",
-        "subject": "[Bug Report] OAuth2 Token Expired Error during mobile sync",
-        "sender": "qa-lead@example.org",
-        "recipient": "dev@synapr.local",
-        "date": "2026-10-02 11:20:00",
-        "body": (
-            "Hi team,\n\nWhen testing on mobile client build #402, our access token expires "
-            "after 15 minutes, but the refresh endpoint returns 401 Unauthorized instead of renewing "
-            "the session. Can we verify the JWT expiration window and add automated test coverage?\n\n"
-            "Steps to reproduce:\n1. Log in on mobile client\n2. Wait 15 mins\n3. Trigger sync\n\nThanks,\nQA Team"
-        ),
-        "category": "bug_report",
-        "priority": "high",
-        "status": "unread",
-        "extracted_tasks": ["Fix JWT refresh token 401", "Add test coverage for token renewal"],
-    },
-    {
-        "id": "mail-002",
-        "subject": "[Feature Request] Add Redis rate limiting to /api/dispatch",
-        "sender": "product@example.org",
-        "recipient": "dev@synapr.local",
-        "date": "2026-10-02 14:45:00",
-        "body": (
-            "Hey devs,\n\nWe need to protect the dispatch API against bursts. "
-            "Please implement a sliding-window rate limiter (100 req/min per API key) "
-            "using Redis. If Redis is unavailable, gracefully fall back to in-memory limiting.\n\n"
-            "Regards,\nProduct"
-        ),
-        "category": "feature_request",
-        "priority": "medium",
-        "status": "unread",
-        "extracted_tasks": ["Implement Redis sliding-window rate limiter", "Add in-memory fallback"],
-    },
-]
+from synapr.email_gateway.sample_data import DEFAULT_SAMPLE_MESSAGES as DEFAULT_SAMPLE_MESSAGES
+from synapr.email_gateway.storage import EmailStorage
 
 
 class EmailGatewayService:
     """Manages email triage, prompt extraction, and safe response drafting."""
 
     def __init__(self, storage_dir: str | Path = ".synapr/mail") -> None:
-        self.storage_dir = Path(storage_dir)
-        self.storage_dir.mkdir(parents=True, exist_ok=True)
-        self.inbox_file = self.storage_dir / "inbox.json"
-        self.drafts_file = self.storage_dir / "drafts.json"
-        self._ensure_storage()
+        self.storage = EmailStorage(storage_dir)
+        self.storage_dir = self.storage.storage_dir
+        self.inbox_file = self.storage.inbox_file
+        self.drafts_file = self.storage.drafts_file
 
     def _ensure_storage(self) -> None:
-        if not self.inbox_file.is_file():
-            self.inbox_file.write_text(json.dumps(DEFAULT_SAMPLE_MESSAGES, indent=2), encoding="utf-8")
-        if not self.drafts_file.is_file():
-            self.drafts_file.write_text(json.dumps([], indent=2), encoding="utf-8")
+        self.storage._ensure_storage()
 
     def _load_messages(self) -> list[EmailMessage]:
-        try:
-            data = json.loads(self.inbox_file.read_text(encoding="utf-8"))
-            return [EmailMessage.model_validate(item) for item in data]
-        except Exception:
-            return []
+        return self.storage._load_messages()
 
     def _save_messages(self, messages: list[EmailMessage]) -> None:
-        payload = [msg.model_dump() for msg in messages]
-        self.inbox_file.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        self.storage._save_messages(messages)
 
     def _load_drafts(self) -> list[EmailDraft]:
-        try:
-            data = json.loads(self.drafts_file.read_text(encoding="utf-8"))
-            return [EmailDraft.model_validate(item) for item in data]
-        except Exception:
-            return []
+        return self.storage._load_drafts()
 
     def _save_drafts(self, drafts: list[EmailDraft]) -> None:
-        payload = [d.model_dump() for d in drafts]
-        self.drafts_file.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        self.storage._save_drafts(drafts)
 
     def list_messages(self, folder: str = "inbox") -> list[EmailMessage]:
         """List incoming email messages."""
