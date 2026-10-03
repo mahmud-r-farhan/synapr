@@ -2,12 +2,10 @@
 
 import asyncio
 import json
-import os
-import urllib.error
-import urllib.request
 from typing import Any
 
 from synapr.config import GatewayConfig
+from synapr.core.http import request_json
 from synapr.core.logger import logger
 
 
@@ -179,15 +177,10 @@ class LLMGateway:
         }
 
         def _do_request() -> dict[str, Any]:
-            data = json.dumps(payload).encode("utf-8")
-            req = urllib.request.Request(
-                url,
-                data=data,
-                headers={"Content-Type": "application/json"},
-                method="POST",
+            result = request_json(
+                url, method="POST", payload=payload, timeout=self.config.timeout_seconds
             )
-            with urllib.request.urlopen(req, timeout=self.config.timeout_seconds) as resp:
-                return json.loads(resp.read().decode("utf-8"))
+            return result if isinstance(result, dict) else {}
 
         try:
             res_json = await asyncio.to_thread(_do_request)
@@ -208,23 +201,10 @@ class LLMGateway:
         max_tokens: int,
     ) -> GatewayResponse:
         """Query OpenAI-compatible providers (OpenAI, Groq, OpenRouter, LM Studio, vLLM)."""
-        base_urls = {
-            "openai": self.config.openai_base_url,
-            "openrouter": "https://openrouter.ai/api/v1",
-            "groq": "https://api.groq.com/openai/v1",
-            "lmstudio": "http://localhost:1234/v1",
-            "vllm": "http://localhost:8000/v1",
-        }
-        api_keys = {
-            "openai": self.config.openai_api_key or os.getenv("OPENAI_API_KEY", ""),
-            "openrouter": self.config.openrouter_api_key or os.getenv("OPENROUTER_API_KEY", ""),
-            "groq": self.config.groq_api_key or os.getenv("GROQ_API_KEY", ""),
-            "lmstudio": "not-needed",
-            "vllm": "not-needed",
-        }
-
-        base_url = base_urls.get(provider, self.config.openai_base_url)
-        api_key = api_keys.get(provider, "")
+        # Endpoints and credentials are fully configurable (config file, env vars
+        # or the visual configurator) - see synapr.config.GatewayConfig.
+        base_url = self.config.base_url_for(provider)
+        api_key = self.config.api_key_for(provider)
 
         url = f"{base_url.rstrip('/')}/chat/completions"
         messages = []
@@ -239,19 +219,20 @@ class LLMGateway:
             "max_tokens": max_tokens,
         }
 
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {api_key}",
-        }
+        headers = {"Authorization": f"Bearer {api_key}"}
         if provider == "openrouter":
             headers["HTTP-Referer"] = "https://github.com/synapr/synapr"
             headers["X-Title"] = "Synapr Orchestrator"
 
         def _do_request() -> dict[str, Any]:
-            data = json.dumps(payload).encode("utf-8")
-            req = urllib.request.Request(url, data=data, headers=headers, method="POST")
-            with urllib.request.urlopen(req, timeout=self.config.timeout_seconds) as resp:
-                return json.loads(resp.read().decode("utf-8"))
+            result = request_json(
+                url,
+                method="POST",
+                payload=payload,
+                headers=headers,
+                timeout=self.config.timeout_seconds,
+            )
+            return result if isinstance(result, dict) else {}
 
         try:
             res_json = await asyncio.to_thread(_do_request)
