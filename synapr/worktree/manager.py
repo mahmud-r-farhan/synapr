@@ -1,12 +1,15 @@
 """Programmatic Git Worktree provisioning and lifecycle management."""
 
 import asyncio
+import os
 import shutil
 from pathlib import Path
 
 from synapr.config import WorktreeConfig
 from synapr.core.logger import logger
 from synapr.core.models import TaskStatus, WorktreeInstance
+from synapr.worktree.paths import is_valid_task_id
+from synapr.worktree.porcelain import parse_worktree_list
 
 
 class GitWorktreeError(Exception):
@@ -23,7 +26,10 @@ class WorktreeManager:
     ) -> None:
         self.repo_root = Path(repo_root or ".").resolve()
         self.config = config or WorktreeConfig()
-        self.worktree_base = self.repo_root / self.config.worktree_root
+        self.worktree_base = (self.repo_root / self.config.worktree_root).resolve()
+        self._worktree_root = os.path.realpath(self.worktree_base)
+        if self._worktree_root == os.path.abspath(os.sep):
+            raise GitWorktreeError("Worktree root cannot be a filesystem root.")
 
     async def _run_git(self, args: list[str], cwd: Path | None = None) -> str:
         """Execute a git command asynchronously in the specified directory."""
@@ -60,8 +66,13 @@ class WorktreeManager:
         feature_branch: str | None = None,
     ) -> WorktreeInstance:
         """Create an isolated worktree and feature branch for a task."""
+        if not is_valid_task_id(task_id):
+            raise GitWorktreeError("Invalid worktree task ID.")
+        normalized_path = os.path.realpath(os.path.join(self._worktree_root, task_id))
+        if not normalized_path.startswith(self._worktree_root + os.sep):
+            raise GitWorktreeError("Worktree path escapes its configured root.")
+        worktree_path = Path(normalized_path)
         self.worktree_base.mkdir(parents=True, exist_ok=True)
-        worktree_path = self.worktree_base / task_id
 
         # Determine branch names
         base = base_branch or await self.detect_base_branch()
@@ -69,7 +80,7 @@ class WorktreeManager:
 
         # Clean existing directory if stale
         if worktree_path.exists():
-            logger.warning(f"Worktree path already exists at {worktree_path}. Attempting cleanup.")
+            logger.warning("Worktree path already exists; attempting cleanup.")
             await self.cleanup_worktree(task_id, force=True, delete_branch=False)
 
         # Check if feature branch exists locally or remotely
@@ -86,7 +97,7 @@ class WorktreeManager:
         else:
             cmd = ["worktree", "add", "-b", branch, str(worktree_path), base]
 
-        logger.info(f"Provisioning worktree: {worktree_path} on branch {branch} (base: {base})")
+        logger.info("Provisioning isolated Git worktree.")
         await self._run_git(cmd)
 
         return WorktreeInstance(
@@ -100,46 +111,38 @@ class WorktreeManager:
     async def list_worktrees(self) -> list[dict[str, str]]:
         """Query active worktrees via porcelain git interface."""
         output = await self._run_git(["worktree", "list", "--porcelain"])
-        worktrees: list[dict[str, str]] = []
-        current: dict[str, str] = {}
-
-        for line in output.splitlines():
-            line = line.strip()
-            if not line:
-                if current:
-                    worktrees.append(current)
-                    current = {}
-                continue
-            if line.startswith("worktree "):
-                current["path"] = line.split(" ", 1)[1]
-            elif line.startswith("HEAD "):
-                current["head"] = line.split(" ", 1)[1]
-            elif line.startswith("branch "):
-                current["branch"] = line.split(" ", 1)[1]
-            elif line == "locked":
-                current["locked"] = "true"
-            elif line == "prunable":
-                current["prunable"] = "true"
-
-        if current:
-            worktrees.append(current)
-        return worktrees
+        return parse_worktree_list(output)
 
     async def lock_worktree(self, task_id: str, reason: str = "Synapr active worker") -> None:
         """Lock worktree to prevent accidental pruning."""
-        worktree_path = self.worktree_base / task_id
+        if not is_valid_task_id(task_id):
+            raise GitWorktreeError("Invalid worktree task ID.")
+        normalized_path = os.path.realpath(os.path.join(self._worktree_root, task_id))
+        if not normalized_path.startswith(self._worktree_root + os.sep):
+            raise GitWorktreeError("Worktree path escapes its configured root.")
+        worktree_path = Path(normalized_path)
         if worktree_path.exists():
             await self._run_git(["worktree", "lock", str(worktree_path), "--reason", reason])
 
     async def unlock_worktree(self, task_id: str) -> None:
         """Unlock a previously locked worktree."""
-        worktree_path = self.worktree_base / task_id
+        if not is_valid_task_id(task_id):
+            raise GitWorktreeError("Invalid worktree task ID.")
+        normalized_path = os.path.realpath(os.path.join(self._worktree_root, task_id))
+        if not normalized_path.startswith(self._worktree_root + os.sep):
+            raise GitWorktreeError("Worktree path escapes its configured root.")
+        worktree_path = Path(normalized_path)
         if worktree_path.exists():
             await self._run_git(["worktree", "unlock", str(worktree_path)])
 
     async def check_uncommitted_changes(self, task_id: str) -> bool:
         """Return True if worktree has uncommitted modifications or untracked files."""
-        worktree_path = self.worktree_base / task_id
+        if not is_valid_task_id(task_id):
+            raise GitWorktreeError("Invalid worktree task ID.")
+        normalized_path = os.path.realpath(os.path.join(self._worktree_root, task_id))
+        if not normalized_path.startswith(self._worktree_root + os.sep):
+            raise GitWorktreeError("Worktree path escapes its configured root.")
+        worktree_path = Path(normalized_path)
         if not worktree_path.exists():
             return False
         status = await self._run_git(["status", "--porcelain"], cwd=worktree_path)
@@ -152,14 +155,20 @@ class WorktreeManager:
         delete_branch: bool = False,
     ) -> None:
         """Remove worktree safely and prune references."""
-        worktree_path = self.worktree_base / task_id
+        if not is_valid_task_id(task_id):
+            raise GitWorktreeError("Invalid worktree task ID.")
+        normalized_path = os.path.realpath(os.path.join(self._worktree_root, task_id))
+        if not normalized_path.startswith(self._worktree_root + os.sep):
+            raise GitWorktreeError("Worktree path escapes its configured root.")
+        worktree_path = Path(normalized_path)
         branch = f"{self.config.branch_prefix}{task_id}"
 
         if worktree_path.exists():
             try:
                 # Unlock first if locked
                 await self.unlock_worktree(task_id)
-            except Exception:
+            except GitWorktreeError:
+                # An already-unlocked worktree can still be removed below.
                 pass
 
             args = ["worktree", "remove"]
@@ -169,8 +178,8 @@ class WorktreeManager:
 
             try:
                 await self._run_git(args)
-            except Exception as e:
-                logger.warning(f"Git worktree remove failed: {e}. Falling back to filesystem deletion.")
+            except Exception:
+                logger.warning("Git worktree removal failed; falling back to filesystem deletion.")
                 if worktree_path.is_dir():
                     shutil.rmtree(worktree_path, ignore_errors=True)
 
@@ -181,7 +190,8 @@ class WorktreeManager:
         if delete_branch:
             try:
                 await self._run_git(["branch", "-D" if force else "-d", branch])
-            except Exception:
+            except GitWorktreeError:
+                # The task branch may already have been deleted.
                 pass
 
     async def prune_all(self) -> None:

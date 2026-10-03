@@ -9,6 +9,7 @@ import urllib.parse
 import urllib.request
 
 from synapr.browser.models import LocalhostValidationResult
+from synapr.core.http import validate_url
 
 CRASH_INDICATORS: tuple[str, ...] = (
     "Traceback (most recent call last)",
@@ -32,11 +33,21 @@ def validate_localhost(
     timeout: float = 6.0,
 ) -> LocalhostValidationResult:
     """Probe a local dev server and report HTTP health and error diagnostics."""
+    try:
+        validate_url(url)
+    except ValueError as exc:
+        return LocalhostValidationResult(
+            url=url,
+            reachable=False,
+            has_errors=True,
+            detail=str(exc),
+        )
+
     parsed = urllib.parse.urlparse(url)
     host = parsed.hostname or "localhost"
 
     # Ensure this is actually a loopback host for safety
-    if host not in {"localhost", "127.0.0.1", "0.0.0.0", "::1"}:
+    if host not in {"localhost", "127.0.0.1", "::1"}:
         return LocalhostValidationResult(
             url=url,
             reachable=False,
@@ -51,7 +62,8 @@ def validate_localhost(
     start = time.perf_counter()
     try:
         req = urllib.request.Request(url, headers=headers)
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
+        # validate_url() restricts this outbound request to HTTP(S).
+        with urllib.request.urlopen(req, timeout=timeout) as resp:  # nosec B310
             latency_ms = (time.perf_counter() - start) * 1000.0
             status_code = resp.getcode()
             body = resp.read().decode("utf-8", errors="replace")

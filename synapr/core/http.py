@@ -56,7 +56,7 @@ def request_json(
         request_headers.setdefault("Content-Type", "application/json")
 
     request = urllib.request.Request(url, data=data, headers=request_headers, method=method)
-    # The scheme is validated above by validate_url(), so this is not an open redirect.
-    with urllib.request.urlopen(request, timeout=timeout) as response:  # noqa: S310  # nosec B310
+    # validate_url() restricts schemes to HTTP(S); Bandit cannot infer this check.
+    with urllib.request.urlopen(request, timeout=timeout) as response:  # nosec B310
         body = response.read().decode("utf-8", errors="replace")
     return json.loads(body) if body.strip() else {}

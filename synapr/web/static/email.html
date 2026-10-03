@@ -1,0 +1,45 @@
+    <!-- ─────────────────────────── Email Hub view ─────────────────────────── -->
+    <section class="view" id="view-email">
+      <div class="hero-panel slim">
+        <div class="hero-row">
+          <div>
+            <h1 class="hero-title">✉️ Intelligent Email Hub &amp; Safe Draft Assistant</h1>
+            <p class="hero-sub">
+              Process customer and client communications locally. AI extracts requirements and drafts technical responses.
+              Outbound transmission is protected by a mandatory safety lock.
+            </p>
+          </div>
+          <div class="action-row">
+            <select id="mail-folder-select" class="select" style="max-width: 130px;">
+              <option value="inbox">📥 Inbox</option>
+              <option value="drafts">📝 Drafts</option>
+              <option value="sent">📤 Sent</option>
+            </select>
+            <button class="btn btn-secondary" id="btn-refresh-mail">↻ Refresh</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="airgap-banner">
+        <span class="airgap-icon">🔒</span>
+        <div><strong>Mandatory Dispatch Safety Lock:</strong> Synapr isolates all generated responses to the <code>Drafts</code> directory. No email is ever sent without explicit developer authorization.</div>
+      </div>
+
+      <div class="grid-2">
+        <div>
+          <h2 class="section-title">📬 Messages</h2>
+          <div id="mail-list-container">
+            <div class="card"><div class="muted">Loading messages…</div></div>
+          </div>
+        </div>
+
+        <div>
+          <div class="card sticky-panel" id="mail-detail-panel">
+            <h2 class="section-title" id="mail-detail-title">Email Workspace</h2>
+            <div id="mail-detail-body">
+              <p class="muted">Select a message on the left to run AI triage, view requirements, or draft a safe response.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>

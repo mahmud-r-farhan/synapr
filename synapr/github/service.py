@@ -47,7 +47,7 @@ class GitHubIssueService:
             raise ValueError(f"Issue #{number} not found in repository {self.client.repository}")
 
         task_id = f"issue-{number}"
-        logger.info(f"Provisioning isolated worktree for GitHub Issue #{number}: {issue.title}")
+        logger.info("Provisioning isolated worktree for a GitHub issue.")
 
         editor = target_editor or preferred_editor or "vscode"
         # 1. Provision worktree on dedicated feature branch

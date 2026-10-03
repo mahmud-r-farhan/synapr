@@ -66,14 +66,18 @@ jobs:
           node-version: "20"
 
       - name: Syntax-check dashboard JavaScript
-        run: node --check synapr/web/static/app.js
+        run: |
+          for file in synapr/web/static/*.js; do
+            node --check "$file"
+          done
 
       - name: Ensure the dashboard stays 100% local (no external assets)
         run: |
           python - <<'PY'
           import pathlib, re, sys
-          html = pathlib.Path("synapr/web/static/index.html").read_text(encoding="utf-8")
-          js = pathlib.Path("synapr/web/static/app.js").read_text(encoding="utf-8")
+          static = pathlib.Path("synapr/web/static")
+          html = "\n".join(path.read_text(encoding="utf-8") for path in sorted(static.glob("*.html")))
+          js = "\n".join(path.read_text(encoding="utf-8") for path in sorted(static.glob("*.js")))
           remote = re.findall(r"""(?:src|href)=["'](https?:)?//[^"']+""", html)
           if remote:
               sys.exit(f"Dashboard must not load remote assets: {remote}")

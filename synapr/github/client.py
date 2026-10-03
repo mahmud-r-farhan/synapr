@@ -12,6 +12,7 @@ import urllib.request
 from pathlib import Path
 from typing import Any
 
+from synapr.core.http import validate_url
 from synapr.core.logger import logger
 from synapr.github.models import GitHubIssue
 
@@ -134,8 +135,10 @@ class GitHubClient:
             if self.token:
                 headers["Authorization"] = f"Bearer {self.token}"
 
+            validate_url(url)
             req = urllib.request.Request(url, headers=headers)
-            with urllib.request.urlopen(req, timeout=8.0) as resp:
+            # validate_url() restricts this outbound request to HTTP(S).
+            with urllib.request.urlopen(req, timeout=8.0) as resp:  # nosec B310
                 data = json.loads(resp.read().decode("utf-8", errors="replace"))
 
             issues = []
