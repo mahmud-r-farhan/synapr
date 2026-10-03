@@ -33,7 +33,12 @@ jobs:
           python -m pip install . pip-audit
 
       - name: Audit installed dependencies
-        run: pip-audit --strict --progress-spinner off
+        run: |
+          # Audit the resolved dependency set. Synapr itself is excluded because
+          # the local build is not published on PyPI and --strict would abort.
+          python -m pip freeze --exclude-editable | grep -v -i "^synapr" > audit-requirements.txt
+          cat audit-requirements.txt
+          pip-audit --strict --progress-spinner off --requirement audit-requirements.txt
 
   bandit:
     name: Static security analysis (bandit)

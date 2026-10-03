@@ -27,6 +27,17 @@ from pathlib import Path
 
 TIMEOUT = 90.0
 
+# Windows consoles default to a legacy code page; force UTF-8 so the status
+# glyphs below (and rich output from the child CLI) never raise UnicodeEncodeError.
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[union-attr]
+    except (AttributeError, ValueError):  # pragma: no cover - exotic stream
+        pass
+
+# Environment forced onto every child process for the same reason.
+CHILD_ENV = {**os.environ, "PYTHONIOENCODING": "utf-8", "PYTHONUTF8": "1", "PYTHONUNBUFFERED": "1"}
+
 
 class SmokeFailure(RuntimeError):
     """Raised when a smoke assertion fails."""
@@ -53,6 +64,9 @@ def run_cli(args: list[str], cwd: Path, expect_success: bool = True) -> str:
         cwd=str(cwd),
         capture_output=True,
         text=True,
+        encoding="utf-8",
+        errors="replace",
+        env=CHILD_ENV,
     )
     output = completed.stdout + completed.stderr
     if expect_success and completed.returncode != 0:
@@ -137,14 +151,15 @@ def smoke_cli(workspace: Path) -> None:
 def smoke_dashboard(workspace: Path, port: int) -> None:
     base_url = f"http://127.0.0.1:{port}"
     step(f"Dashboard: booting `synapr ui` on {base_url}")
-    env = {**os.environ, "PYTHONUNBUFFERED": "1"}
     process = subprocess.Popen(
         [sys.executable, "-m", "synapr", "ui", "--port", str(port), "--no-open-browser"],
         cwd=str(workspace),
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
-        env=env,
+        encoding="utf-8",
+        errors="replace",
+        env=CHILD_ENV,
     )
     try:
         wait_for_server(base_url, process)
@@ -222,7 +237,9 @@ def main() -> int:
     parser.add_argument("--port", type=int, default=8799)
     args = parser.parse_args()
 
-    with tempfile.TemporaryDirectory(prefix="synapr-smoke-") as tmp:
+    # ``ignore_cleanup_errors`` keeps Windows happy: git objects inside the
+    # provisioned worktrees are read-only and resist shutil.rmtree.
+    with tempfile.TemporaryDirectory(prefix="synapr-smoke-", ignore_cleanup_errors=True) as tmp:
         workspace = Path(tmp)
         subprocess.run(["git", "init"], cwd=str(workspace), check=True, capture_output=True)
         try:
@@ -231,6 +248,11 @@ def main() -> int:
         except SmokeFailure as failure:
             print(f"\n\033[91m✘ Smoke test failed: {failure}\033[0m", flush=True)
             return 1
+        finally:
+            # Detach git worktrees before the directory is removed.
+            subprocess.run(
+                ["git", "worktree", "prune"], cwd=str(workspace), capture_output=True, check=False
+            )
     print("\n\033[92m✔ All smoke checks passed\033[0m", flush=True)
     return 0
 
