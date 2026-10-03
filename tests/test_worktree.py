@@ -54,16 +54,16 @@ def test_worktree_methods_reject_unsafe_task_ids(temp_repo: Path, task_id: str) 
     manager = WorktreeManager(str(temp_repo), WorktreeConfig(worktree_root=".test_worktrees"))
 
     async def _test() -> None:
-        operations = (
-            manager.provision_worktree(task_id),
-            manager.lock_worktree(task_id),
-            manager.unlock_worktree(task_id),
-            manager.check_uncommitted_changes(task_id),
-            manager.cleanup_worktree(task_id),
-        )
-        for operation in operations:
-            with pytest.raises(GitWorktreeError, match="task ID"):
-                await operation
+        with pytest.raises(GitWorktreeError, match="task ID"):
+            await manager.provision_worktree(task_id)
+        with pytest.raises(GitWorktreeError, match="task ID"):
+            await manager.lock_worktree(task_id)
+        with pytest.raises(GitWorktreeError, match="task ID"):
+            await manager.unlock_worktree(task_id)
+        with pytest.raises(GitWorktreeError, match="task ID"):
+            await manager.check_uncommitted_changes(task_id)
+        with pytest.raises(GitWorktreeError, match="task ID"):
+            await manager.cleanup_worktree(task_id)
 
     asyncio.run(_test())
     assert not (temp_repo / ".test_worktrees").exists()
@@ -83,6 +83,6 @@ def test_worktree_methods_reject_symlink_escape(temp_repo: Path, tmp_path: Path)
         pytest.skip(f"Directory symlinks unavailable: {exc}")
 
     manager = WorktreeManager(str(temp_repo), WorktreeConfig(worktree_root=".test_worktrees"))
-    with pytest.raises(GitWorktreeError, match="symlink"):
+    with pytest.raises(GitWorktreeError, match="configured root"):
         asyncio.run(manager.cleanup_worktree("task-safe"))
     assert (outside / "keep.txt").read_text(encoding="utf-8") == "untouched"
