@@ -46,7 +46,7 @@ synapr = "synapr.cli.main:main"
 include = ["synapr*"]
 
 [tool.setuptools.package-data]
-synapr = ["web/static/*"]
+synapr = ["web/static/*", "assets/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

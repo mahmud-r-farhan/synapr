@@ -18,7 +18,7 @@ from typing import Any
 
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, PlainTextResponse, StreamingResponse
+from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
@@ -59,6 +59,17 @@ app.add_middleware(
 
 if STATIC_DIR.is_dir():
     app.mount("/assets", StaticFiles(directory=str(STATIC_DIR)), name="assets")
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon() -> FileResponse:
+    """Serve the local application icon as the web favicon."""
+    ico_path = STATIC_DIR / "image.ico"
+    if not ico_path.is_file():
+        ico_path = Path(__file__).resolve().parent.parent / "assets" / "image.ico"
+    if ico_path.is_file():
+        return FileResponse(ico_path, media_type="image/x-icon")
+    raise HTTPException(status_code=404, detail="Favicon not found")
 
 
 # --------------------------------------------------------------------------------------

@@ -7,7 +7,7 @@
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-brightgreen.svg)]()
 [![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-blue.svg)]()
 [![Privacy: 100% Local](https://img.shields.io/badge/Privacy-100%25%20Local-success.svg)]()
-[![Tests: 148 Passed](https://img.shields.io/badge/Tests-148%20Passed-brightgreen.svg)]()
+[![Tests: 162 Passed](https://img.shields.io/badge/Tests-162%20Passed-brightgreen.svg)]()
 [![Config: Visual + Env](https://img.shields.io/badge/Config-Visual%20%7C%20CLI%20%7C%20Env-8b5cf6.svg)]()
 
 ---
@@ -117,7 +117,22 @@ Modern AI coding agents usually work inside a single terminal window or a single
 ## 📦 Quick Start
 
 ### 1. Installation
-Clone the repository and install with pip:
+
+#### Option A: Standalone Native Installers (Recommended)
+Pre-built native packages are available on the [GitHub Releases](https://github.com/mahmud-r-farhan/synapr/releases) page:
+* **Windows (`Synapr-Setup-x64-v0.1.0.exe`)**:
+  * Double-click installer wizard ("Next Next Next")
+  * Displays the full MIT License agreement
+  * Desktop shortcut and Start Menu shortcut toggles (ON/OFF)
+  * PATH environment variable integration for instant CLI access
+  * Highlights 100% local execution guarantee (Zero Data Leak)
+* **Linux (`synapr_0.1.0_amd64.deb` or `.tar.gz`)**:
+  * Debian/Ubuntu package with desktop menu entry and scalable icon
+  * Install via `sudo dpkg -i synapr_0.1.0_amd64.deb` or extract portable tarball
+* **macOS (`synapr-macos-arm64-v0.1.0.tar.gz`)**:
+  * Standalone portable distribution for Apple Silicon & Intel
+
+#### Option B: Install via Python / pip
 ```bash
 git clone https://github.com/mahmud-r-farhan/synapr
 cd synapr

@@ -5,11 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Synapr ⚡ Local Multi-IDE AI Swarm</title>
   <!-- 100% local assets: no external fonts, CDNs or trackers are ever requested. -->
+  <link rel="icon" type="image/x-icon" href="/assets/image.ico">
   <link rel="stylesheet" href="/assets/styles.css">
 </head>
 <body>
   <header class="navbar">
     <div class="brand">
+      <img src="/assets/image.ico" alt="Synapr Logo" class="brand-logo" width="28" height="28">
       <span class="brand-mark">⚡ Synapr Swarm OS</span>
       <span class="brand-version" id="brand-version">v0.1.0</span>
     </div>
@@ -41,6 +43,11 @@
           <button class="btn btn-primary" id="btn-launch">🚀 Launch Swarm</button>
           <button class="btn btn-secondary" id="btn-dry-run">🔬 Dry-Run Simulation</button>
         </div>
+      </div>
+
+      <div class="airgap-banner">
+        <span class="airgap-icon">🔒</span>
+        <div><strong>100% Local Machine &amp; Zero Data Leak:</strong> Swarm execution and Git worktrees run strictly on your local host. Zero telemetry, code, or metrics are collected by Synapr.</div>
       </div>
 
       <div class="grid-2">
@@ -97,6 +104,11 @@
         </div>
         <div class="notice" id="config-dirty" hidden>You have unsaved changes.</div>
         <div class="notice notice-warn" id="config-errors" hidden></div>
+      </div>
+
+      <div class="airgap-banner">
+        <span class="airgap-icon">🛡️</span>
+        <div><strong>Zero Data Leak Guarantee:</strong> All settings are applied and stored locally on your machine. No telemetry or usage data is collected or sent to Synapr.</div>
       </div>
 
       <div class="card provider-card">

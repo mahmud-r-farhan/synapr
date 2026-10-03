@@ -39,6 +39,8 @@ def test_dashboard_and_assets_are_served(client: TestClient) -> None:
 
     assert client.get("/assets/app.js").status_code == 200
     assert client.get("/assets/styles.css").status_code == 200
+    assert client.get("/favicon.ico").status_code == 200
+    assert client.get("/assets/image.ico").status_code == 200
 
 
 def test_dashboard_has_no_external_requests(client: TestClient) -> None:

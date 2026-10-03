@@ -44,7 +44,8 @@ code { font-family: var(--mono); font-size: 0.86em; }
   flex-wrap: wrap;
 }
 
-.brand { display: flex; align-items: baseline; gap: 0.6rem; font-weight: 800; font-size: 1.3rem; letter-spacing: -0.5px; }
+.brand { display: flex; align-items: center; gap: 0.65rem; font-weight: 800; font-size: 1.3rem; letter-spacing: -0.5px; }
+.brand-logo { width: 28px; height: 28px; object-fit: contain; border-radius: 6px; box-shadow: 0 0 10px rgba(139, 92, 246, 0.4); }
 .brand-mark { background: linear-gradient(135deg, #a78bfa, #38bdf8); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
 .brand-version { font-size: 0.78rem; color: var(--text-muted); font-weight: 500; font-family: var(--mono); }
 
@@ -189,6 +190,15 @@ code { font-family: var(--mono); font-size: 0.86em; }
   background: rgba(139, 92, 246, 0.12); border: 1px solid rgba(139, 92, 246, 0.35); color: #c4b5fd;
 }
 .notice-warn { background: rgba(244, 63, 94, 0.1); border-color: rgba(244, 63, 94, 0.35); color: #fda4af; white-space: pre-wrap; }
+
+.airgap-banner {
+  display: flex; align-items: center; gap: 0.75rem;
+  padding: 0.75rem 1.2rem; margin: 1rem 0;
+  background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25);
+  border-radius: 0.8rem; font-size: 0.85rem; color: #a7f3d0; line-height: 1.45;
+}
+.airgap-banner strong { color: #34d399; }
+.airgap-icon { font-size: 1.15rem; flex-shrink: 0; }
 
 .provider-card .provider-row { display: flex; justify-content: space-between; align-items: center; gap: 1.5rem; flex-wrap: wrap; }
 
