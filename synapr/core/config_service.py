@@ -92,6 +92,21 @@ SECTION_META: dict[str, dict[str, str]] = {
         "icon": "🎛️",
         "description": "Local control center behaviour and safety switches.",
     },
+    "browser": {
+        "title": "Web & Research",
+        "icon": "🔍",
+        "description": "Search engine and live web documentation research parameters.",
+    },
+    "email": {
+        "title": "Email Gateway",
+        "icon": "✉️",
+        "description": "Mail monitoring, triage, and draft generation.",
+    },
+    "github": {
+        "title": "GitHub Integration",
+        "icon": "🐙",
+        "description": "Repository issue tracking, worktree mapping, and PR automation.",
+    },
 }
 
 

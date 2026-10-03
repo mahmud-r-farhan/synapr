@@ -67,77 +67,65 @@ An offline-first, low-latency audio processing loop to drive development command
 
 ---
 
-## 3. Autonomous Browser Automation Engine
+## 3. Autonomous Browser Automation & Live Web Research Engine `[STATUS: IMPLEMENTED]`
 
-A programmatic browser bridge providing web navigation, UI testing, and documentation research capabilities to running agents.
+A programmatic browser bridge and live search engine providing zero-API-key web navigation, dev-server verification, and documentation research capabilities to running agents and LLMs.
 
-### Implementation Blueprint
-
-* **Engine:** Built upon **Playwright** and **Browser-Use** primitives operating in headless or headful mode.
-* **Use Cases:**
-* **Localhost Validation:** Automatically opens `http://localhost:3000` (or configured dev servers) after code edits to verify that routes render without console errors.
-* **Live Documentation Scraping:** Ingests live API docs, package changelogs, and SDK references when training context is outdated.
-* **End-to-End Visual Verification:** Drives browser forms, submits sample payloads, and snaps viewport screenshots for vision model verification.
-
-
-
----
-
-## 4. Intelligent Email Processing & Draft Generation
-
-A privacy-focused communication gateway that parses client requirements, updates, or bug reports from incoming emails and prepares drafted responses.
-
-### Operational Design
-
-* **Secure Mail Connectors:**
-* Uses local IMAP/SMTP protocols or official OAuth2 token exchanges (e.g., Google Workspace / Gmail API).
-* Credentials remain encrypted locally on the host machine.
-
-
-* **Inbox Monitoring & Triage:**
-* Polls unread threads matching user-defined project labels or sender filters.
-* Extracts customer bug reports, feature requests, or deployment queries into structured markdown briefs.
-
-
-* **Draft Generation & Safe Dispatch:**
-* Synthesizes technical context, current repository state, and relevant logs to draft a professional response.
-* **Strict Safety Rule:** Saves responses exclusively to the **Drafts** folder. Outbound delivery requires explicit developer confirmation via CLI or the companion mobile app.
-
-
+### Implementation Details
+* **Zero-API-Key Search Engine:** DuckDuckGo HTML Lite scraping + Instant Answer API fallback (`search_duckduckgo`) and local/remote SearXNG support (`search_searxng`).
+* **Web Content Extraction:** Clean HTML parsing stripping script/style/svg, producing structured markdown text for prompt injection (`fetch_webpage`).
+* **Localhost Validation:** Probes local development servers (`http://localhost:3000`, `:8000`, `:5173`), computes latency, extracts titles, and scans for runtime crash/compilation error signatures (`validate_localhost`).
+* **CLI Commands:**
+  * `synapr search <query>`: live web research.
+  * `synapr fetch <url>`: extract clean markdown from online documentation.
+  * `synapr test-url <url>`: probe and validate local dev server health.
+* **REST Endpoints:** `/api/search`, `/api/fetch-url`, `/api/browser/validate-localhost`.
+* **Dashboard Interface:** Dedicated **🌐 Research & Browser** tab with interactive query execution, reader drawer, and 1-click dev-server error auto-fix in Swarm.
 
 ---
 
-## 5. GitHub Repository & Issue Lifecycle Tracker
+## 4. Intelligent Email Processing & Safe Draft Generation `[STATUS: IMPLEMENTED]`
+
+A privacy-focused communication gateway that triages customer bug reports and client requirements from incoming emails, extracts structured tasks, and prepares context-aware technical drafts.
+
+### Implementation Details
+* **Local Storage & IMAP Bridges:** Local JSON storage (`.synapr/mail/`) with incoming mailbox management and IMAP connector capabilities.
+* **AI-Powered Email Triage:** Classifies urgency (`critical`, `high`, `medium`, `low`), categorizes (`bug_report`, `feature_request`, `task_brief`), generates executive summaries, and extracts actionable development tasks (`EmailGatewayService.triage_message`).
+* **Context-Aware Technical Drafts:** Ingests active Git branches, provider summaries, and developer notes to prepare professional client responses (`generate_draft`).
+* **Mandatory Safety Dispatch Gate:** Responses are saved strictly to the `Drafts` directory. Outbound dispatch is locked and raises a `RuntimeError` unless `confirm=True` (or `--confirm` in CLI) is explicitly authorized by the developer (`send_draft`).
+* **CLI Commands:**
+  * `synapr mail list [--folder inbox|drafts|sent]`
+  * `synapr mail triage <message_id>`
+  * `synapr mail draft <message_id> [--notes "..."]`
+  * `synapr mail send <draft_id> [--confirm]`
+* **REST Endpoints:** `/api/mail/messages`, `/api/mail/messages/{id}/triage`, `/api/mail/messages/{id}/draft`, `/api/mail/drafts`, `/api/mail/drafts/{id}/send`.
+* **Dashboard Interface:** Dedicated **✉️ Email Hub** tab with triage classification badges, draft composer, and safety dispatch confirmation gate.
+
+---
+
+## 5. GitHub Repository & Issue Lifecycle Tracker `[STATUS: IMPLEMENTED]`
 
 A native integration to map remote GitHub issues directly into autonomous local development loops without leaving the IDE workspace.
 
-### Key Capabilities
-
-* **Bi-directional Issue Sync:**
-* Utilizes GitHub CLI (`gh`) or REST/GraphQL APIs to fetch assigned issues and labels (`bug`, `enhancement`, `help wanted`).
-
-
-* **Issue-to-Branch Orchestration:**
-* Running `synapr issue #142` automatically clones issue context, provisions worktree `.worktrees/issue-142`, opens the assigned IDE, and seeds the agent's task prompt with the issue description and reproduction steps.
-
-
-* **Automated PR & Status Reporting:**
-* Upon passing test verification, Synapr generates an explanatory pull request linking to `Closes #142`, including a machine-generated changelog and test results.
-
-
-* **Issue Comment Triage:**
-* Monitors PR review comments; automatically pulls reviewer feedback back into the isolated worktree to patch flagged code.
-
-
+### Implementation Details
+* **Bi-directional Issue Sync:** Connects via `gh` CLI or GitHub REST API with offline caching and automatic repository detection from git remotes (`GitHubClient`, `detect_repository`).
+* **Issue-to-Worktree Autonomous Provisioning:** Automatically clones issue context, provisions dedicated isolated worktree `.worktrees/issue-<number>`, checks out feature branch `synapr/issue-<number>`, launches the target IDE, and seeds `AGENT_INSTRUCTIONS.md` with issue description, objectives, and test requirements (`solve_issue_in_worktree`).
+* **Automated PR Description Generator:** Generates structured pull request drafts with issue closing references (`Closes #<number>`), change summaries, and verification checklists (`prepare_pr_for_issue`).
+* **CLI Commands:**
+  * `synapr issue list [--state open|closed|all]`
+  * `synapr issue solve <number> [--editor vscode|cursor|...]`
+  * `synapr issue pr <number>`
+* **REST Endpoints:** `/api/github/issues`, `/api/github/issues/{number}`, `/api/github/issues/{number}/solve`, `/api/github/issues/{number}/pr`.
+* **Dashboard Interface:** Dedicated **🐙 GitHub Issues** tab with real-time issue browsing, 1-click worktree provisioning, PR preview, and transfer to Swarm.
 
 ---
 
 ## 6. Implementation Milestones
 
-| Milestone | Target Deliverable | Core Libraries & Tooling |
-| --- | --- | --- |
-| **Phase 1** | Local Voice Controller & Intent Parser | `openwakeword`, `faster-whisper`, `piper-tts` |
-| **Phase 2** | GitHub Issue Sync & PR Automator | `gh` CLI bridge, `PyGithub` / `octokit` |
-| **Phase 3** | Headless Browser Agent & UI Tester | `playwright`, `browser-use` |
-| **Phase 4** | Email Reader & Draft Assistant | `imaplib`, `email`, Gmail REST API |
-| **Phase 5** | Encrypted Mobile Gateway & Companion App | `FastAPI`, `WebSockets`, `Tailscale`, `React Native` |
+| Milestone | Target Deliverable | Core Libraries & Tooling | Status |
+| --- | --- | --- | --- |
+| **Phase 1** | Local Voice Controller & Intent Parser | `openwakeword`, `faster-whisper`, `piper-tts` | Planned |
+| **Phase 2** | GitHub Issue Sync & PR Automator | `gh` CLI bridge, REST API, Worktree Manager | **Completed (v0.2.0)** |
+| **Phase 3** | Live Web Research & Dev-Server Validator | DuckDuckGo HTML parser, SearXNG, Loopback Inspector | **Completed (v0.2.0)** |
+| **Phase 4** | Email Triage & Safe Draft Assistant | Local Mailbox, AI Triage, Safety Lock Dispatch | **Completed (v0.2.0)** |
+| **Phase 5** | Encrypted Mobile Gateway & Companion App | `FastAPI`, `WebSockets`, `Tailscale`, `React Native` | Planned |

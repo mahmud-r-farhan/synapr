@@ -402,6 +402,68 @@ ENV_VAR_SPECS: tuple[EnvVarSpec, ...] = (
         description="Dashboard polling interval for status widgets.",
         example="5",
     ),
+    # -- browser & research ------------------------------------------------------
+    EnvVarSpec(
+        name="SYNAPR_SEARCH_ENGINE",
+        path="browser.search_engine",
+        description="Search engine backend (duckduckgo, searxng).",
+        example="duckduckgo",
+    ),
+    EnvVarSpec(
+        name="SYNAPR_SEARXNG_URL",
+        path="browser.searxng_url",
+        description="SearXNG endpoint URL.",
+        example="http://localhost:8080",
+    ),
+    EnvVarSpec(
+        name="SYNAPR_MAX_SEARCH_RESULTS",
+        path="browser.max_search_results",
+        kind="int",
+        description="Maximum search results to retrieve.",
+        example="5",
+    ),
+    # -- email -------------------------------------------------------------------
+    EnvVarSpec(
+        name="SYNAPR_EMAIL_ENABLED",
+        path="email.enabled",
+        kind="bool",
+        description="Enable email triage gateway.",
+        example="true",
+    ),
+    EnvVarSpec(
+        name="SYNAPR_IMAP_HOST",
+        path="email.imap_host",
+        description="IMAP server hostname.",
+        example="imap.example.com",
+    ),
+    EnvVarSpec(
+        name="SYNAPR_IMAP_USERNAME",
+        path="email.imap_username",
+        description="IMAP username / email.",
+        example="dev@example.com",
+    ),
+    EnvVarSpec(
+        name="SYNAPR_IMAP_PASSWORD",
+        path="email.imap_password",
+        secret=True,
+        description="IMAP password or app token.",
+        example="secret_token",
+    ),
+    # -- github ------------------------------------------------------------------
+    EnvVarSpec(
+        name="SYNAPR_GITHUB_TOKEN",
+        path="github.token",
+        secret=True,
+        aliases=("GITHUB_TOKEN", "GH_TOKEN"),
+        description="GitHub personal access token.",
+        example="ghp_live_secret",
+    ),
+    EnvVarSpec(
+        name="SYNAPR_GITHUB_REPO",
+        path="github.repository",
+        description="Target GitHub repository (owner/repo).",
+        example="mahmud-r-farhan/synapr",
+    ),
 )
 
 ENV_SPECS_BY_PATH: dict[str, EnvVarSpec] = {spec.path: spec for spec in ENV_VAR_SPECS}
@@ -768,6 +830,39 @@ class UIConfig(_Section):
     theme: Literal["dark", "light"] = Field(default="dark", description="Dashboard theme")
 
 
+class BrowserConfig(_Section):
+    """Configuration for browser automation, live web research, and dev-server validation."""
+
+    search_engine: str = Field(default="duckduckgo", description="Search engine: 'duckduckgo', 'searxng'")
+    searxng_url: str = Field(default="http://localhost:8080", description="SearXNG base URL (when engine='searxng')")
+    max_search_results: int = Field(default=5, ge=1, le=20, description="Max search results to retrieve")
+    timeout_seconds: float = Field(default=12.0, gt=0, description="Web query timeout in seconds")
+    validate_localhost_on_launch: bool = Field(default=False, description="Auto-probe dev server on task start")
+    default_localhost_url: str = Field(default="http://localhost:3000", description="Default local dev URL to validate")
+
+
+class EmailConfig(_Section):
+    """Configuration for email monitoring, issue triage, and draft generation."""
+
+    enabled: bool = Field(default=True, description="Enable email triage subsystem")
+    imap_host: str = Field(default="", description="IMAP server hostname")
+    imap_port: int = Field(default=993, ge=1, le=65535, description="IMAP port")
+    imap_username: str = Field(default="", description="IMAP username / email address")
+    imap_password: str | None = Field(default=None, description="IMAP password / app token")
+    auto_triage: bool = Field(default=True, description="Auto-classify incoming emails into task briefs")
+    save_drafts_only: bool = Field(default=True, description="Safety rule: drafts are never sent without human approval")
+
+
+class GitHubConfig(_Section):
+    """Configuration for GitHub repository issue sync and PR automation."""
+
+    enabled: bool = Field(default=True, description="Enable GitHub issue integration")
+    token: str | None = Field(default=None, description="GitHub personal access token")
+    repository: str | None = Field(default=None, description="GitHub repository 'owner/repo' (auto-detected if None)")
+    auto_link_pr: bool = Field(default=True, description="Link 'Closes #N' in generated pull requests")
+    base_branch: str = Field(default="main", description="Target base branch for pull requests")
+
+
 @dataclass
 class ConfigMeta:
     """Provenance information attached to a loaded :class:`SynaprConfig`."""
@@ -789,6 +884,9 @@ class SynaprConfig(_Section):
     perception: PerceptionConfig = Field(default_factory=PerceptionConfig)
     pipeline: PipelineConfig = Field(default_factory=PipelineConfig)
     ui: UIConfig = Field(default_factory=UIConfig)
+    browser: BrowserConfig = Field(default_factory=BrowserConfig)
+    email: EmailConfig = Field(default_factory=EmailConfig)
+    github: GitHubConfig = Field(default_factory=GitHubConfig)
 
     _meta: ConfigMeta = PrivateAttr(default_factory=ConfigMeta)
 

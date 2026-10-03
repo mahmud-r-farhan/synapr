@@ -198,7 +198,18 @@ def test_schema_covers_every_section_and_field(service: ConfigService) -> None:
     schema = service.schema()
     keys = [section["key"] for section in schema["sections"]]
 
-    assert keys == ["general", "gateway", "worktree", "editor", "perception", "pipeline", "ui"]
+    assert keys == [
+        "general",
+        "gateway",
+        "worktree",
+        "editor",
+        "perception",
+        "pipeline",
+        "ui",
+        "browser",
+        "email",
+        "github",
+    ]
     gateway = next(s for s in schema["sections"] if s["key"] == "gateway")
     assert len(gateway["fields"]) == len(SynaprConfig().gateway.model_fields)
 

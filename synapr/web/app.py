@@ -438,6 +438,225 @@ async def stream_events(request: Request) -> StreamingResponse:
     )
 
 
+# --------------------------------------------------------------------------------------
+# Web Search & Browser Automation APIs (FUTURE_EXPANSIONS.md #3)
+# --------------------------------------------------------------------------------------
+
+
+class SearchRequest(BaseModel):
+    query: str
+    limit: int = 5
+    fetch_content: bool = True
+
+
+class FetchUrlRequest(BaseModel):
+    url: str
+    max_chars: int = 12000
+
+
+class LocalhostValidateRequest(BaseModel):
+    url: str = "http://localhost:3000"
+
+
+@app.get("/api/search")
+async def api_search_get(q: str, limit: int = 5) -> dict[str, Any]:
+    """Execute live web search for LLM context or user inquiry."""
+    from synapr.browser.search import search_web
+
+    results = await asyncio.to_thread(search_web, q, max_results=min(limit, 20))
+    return {"query": q, "count": len(results), "results": [r.model_dump() for r in results]}
+
+
+@app.post("/api/search")
+async def api_search_post(req: SearchRequest) -> dict[str, Any]:
+    """Search the web and optionally fetch text excerpts from the top pages."""
+    gateway = get_orchestrator().gateway
+    return await gateway.search_and_research(
+        query=req.query, max_results=req.limit, fetch_content=req.fetch_content
+    )
+
+
+@app.post("/api/fetch-url")
+async def api_fetch_url(req: FetchUrlRequest) -> dict[str, Any]:
+    """Fetch an arbitrary webpage and extract clean markdown text for analysis."""
+    from synapr.browser.search import fetch_webpage
+
+    page = await asyncio.to_thread(fetch_webpage, req.url, max_chars=req.max_chars)
+    data = page.model_dump()
+    data["markdown"] = page.text
+    return data
+
+
+@app.post("/api/browser/validate-localhost")
+async def api_validate_localhost(req: LocalhostValidateRequest) -> dict[str, Any]:
+    """Inspect local development server health and scan for runtime crash indicators."""
+    from synapr.browser.engine import validate_localhost
+
+    result = await asyncio.to_thread(validate_localhost, req.url)
+    data = result.model_dump()
+    data["is_healthy"] = result.is_healthy
+    data["errors_detected"] = result.errors_detected
+    return data
+
+
+# --------------------------------------------------------------------------------------
+# GitHub Issue & PR Lifecycle APIs (FUTURE_EXPANSIONS.md #5)
+# --------------------------------------------------------------------------------------
+
+_github_service: Any = None
+
+
+def get_github_service() -> Any:
+    global _github_service
+    if _github_service is None:
+        from synapr.github.service import GitHubIssueService
+
+        _github_service = GitHubIssueService(worktree_manager=get_orchestrator().worktree_mgr)
+    return _github_service
+
+
+@app.get("/api/github/issues")
+async def api_github_issues(state: str = "open", limit: int = 15) -> list[dict[str, Any]]:
+    """List GitHub repository issues."""
+    svc = get_github_service()
+    issues = await asyncio.to_thread(svc.list_issues, state=state, limit=limit)
+    return [issue.model_dump() for issue in issues]
+
+
+@app.get("/api/github/issues/{number}")
+async def api_github_issue(number: int) -> dict[str, Any]:
+    """Fetch details for a single GitHub issue."""
+    svc = get_github_service()
+    issue = await asyncio.to_thread(svc.get_issue, number)
+    if not issue:
+        raise HTTPException(status_code=404, detail=f"Issue #{number} not found")
+    return issue.model_dump()
+
+
+@app.post("/api/github/issues/{number}/solve")
+async def api_github_solve_issue(number: int) -> dict[str, Any]:
+    """Provision a dedicated worktree for an issue and inject AGENT_INSTRUCTIONS.md."""
+    svc = get_github_service()
+    try:
+        result = await svc.solve_issue_in_worktree(number)
+        bus.emit("github:issue_worktree_provisioned", result)
+        return result
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@app.get("/api/github/issues/{number}/pr")
+async def api_github_issue_pr(number: int) -> dict[str, Any]:
+    """Generate pull request description linking the resolved issue."""
+    svc = get_github_service()
+    pr = svc.prepare_pr_for_issue(number)
+    data = pr.model_dump()
+    data["head_branch"] = pr.branch
+    data["base_branch"] = pr.base
+    return data
+
+
+# --------------------------------------------------------------------------------------
+# Email Gateway & Draft Assistant APIs (FUTURE_EXPANSIONS.md #4)
+# --------------------------------------------------------------------------------------
+
+_email_service: Any = None
+
+
+def get_email_service() -> Any:
+    global _email_service
+    if _email_service is None:
+        from synapr.email_gateway.service import EmailGatewayService
+
+        _email_service = EmailGatewayService()
+    return _email_service
+
+
+class EmailDraftRequest(BaseModel):
+    developer_notes: str = ""
+
+
+class EmailSendRequest(BaseModel):
+    confirm: bool = False
+
+
+@app.get("/api/mail/messages")
+async def api_mail_messages(folder: str = "inbox") -> list[dict[str, Any]]:
+    """List incoming customer and client requirement messages."""
+    svc = get_email_service()
+    msgs = await asyncio.to_thread(svc.list_messages, folder=folder)
+    return [m.model_dump() for m in msgs]
+
+
+@app.get("/api/mail/messages/{message_id}")
+async def api_mail_message(message_id: str) -> dict[str, Any]:
+    """Retrieve an email message by ID."""
+    svc = get_email_service()
+    msg = await asyncio.to_thread(svc.get_message, message_id)
+    if not msg:
+        raise HTTPException(status_code=404, detail=f"Message {message_id} not found")
+    return msg.model_dump()
+
+
+@app.post("/api/mail/messages/{message_id}/triage")
+async def api_mail_triage(message_id: str) -> dict[str, Any]:
+    """Classify email message into structured engineering brief."""
+    svc = get_email_service()
+    try:
+        res = await asyncio.to_thread(svc.triage_message, message_id)
+        data = res.model_dump()
+        data["urgency"] = res.priority
+        data["executive_summary"] = res.summary
+        data["action_items"] = res.actionable_items
+        return data
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@app.get("/api/mail/drafts")
+async def api_mail_drafts() -> list[dict[str, Any]]:
+    """List prepared response drafts."""
+    svc = get_email_service()
+    drafts = await asyncio.to_thread(svc.list_drafts)
+    return [d.model_dump() for d in drafts]
+
+
+@app.post("/api/mail/messages/{message_id}/draft")
+async def api_mail_create_draft(message_id: str, req: EmailDraftRequest) -> dict[str, Any]:
+    """Generate a context-aware technical draft response strictly to Drafts."""
+    svc = get_email_service()
+    orch = get_orchestrator()
+    summary = get_config_service().summary()
+    repo_ctx = f"Branch: {orch.config.worktree.base_branch} | Provider: {summary['provider']}"
+    try:
+        draft = await asyncio.to_thread(
+            svc.generate_draft,
+            message_id,
+            developer_notes=req.developer_notes,
+            repo_context=repo_ctx,
+        )
+        data = draft.model_dump()
+        data["recipient"] = draft.to
+        return data
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@app.post("/api/mail/drafts/{draft_id}/send")
+async def api_mail_send_draft(draft_id: str, req: EmailSendRequest) -> dict[str, Any]:
+    """Safe dispatch gate: Outbound transmission blocked unless confirm=True."""
+    svc = get_email_service()
+    try:
+        res = await asyncio.to_thread(svc.send_draft, draft_id, confirm=req.confirm)
+        if "recipient" not in res and "to" in res:
+            res["recipient"] = res["to"]
+        return res
+    except RuntimeError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
 _FALLBACK_HTML = (
     "<!DOCTYPE html><html><head><meta charset='utf-8'><title>Synapr</title></head>"
     "<body style='font-family:sans-serif;background:#090d16;color:#f1f5f9;padding:2rem'>"

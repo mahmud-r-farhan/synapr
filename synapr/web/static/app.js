@@ -88,6 +88,8 @@ function activateView(name) {
   $$(".view").forEach((view) => view.classList.toggle("is-active", view.id === `view-${name}`));
   if (name === "config" && !state.schema) loadConfig();
   if (name === "env" && state.envVars.length === 0) loadEnv();
+  if (name === "github" && !state.githubLoaded) loadGithubIssues();
+  if (name === "email" && !state.mailLoaded) loadMailMessages();
 }
 
 /* ──────────────────────────────── swarm view ──────────────────────────────── */
@@ -597,6 +599,462 @@ async function applyEnv(values, unset) {
   }
 }
 
+/* ────────────────────────── research & browser view ────────────────────────── */
+
+let currentMarkdown = "";
+
+async function executeSearch() {
+  const query = $("#search-input").value.trim();
+  if (!query) {
+    toast("Please enter a search query.", "info");
+    return;
+  }
+  const engine = $("#search-engine").value;
+  const statusEl = $("#search-status-text");
+  const container = $("#search-results-container");
+
+  statusEl.textContent = `Searching ${engine}…`;
+  container.innerHTML = `<div class="muted small">Querying web search engine for "${query}"…</div>`;
+
+  try {
+    const data = await api("/api/search", {
+      method: "POST",
+      body: { query, limit: 6, fetch_content: false },
+    });
+
+    const results = data.results || [];
+    statusEl.textContent = `${results.length} results found`;
+    container.innerHTML = "";
+
+    if (!results.length) {
+      container.innerHTML = '<div class="muted">No search results found. Try another query.</div>';
+      return;
+    }
+
+    results.forEach((r, idx) => {
+      const card = el("div", { class: "result-card" }, [
+        el("div", { class: "result-title", text: `${idx + 1}. ${r.title}` }),
+        el("div", { class: "result-url", text: r.url }),
+        el("div", { class: "result-snippet", text: r.snippet || "No preview snippet available." }),
+        el("div", { class: "result-actions" }, [
+          el("button", {
+            class: "btn btn-secondary btn-sm",
+            text: "📄 Extract Markdown",
+            onclick: () => fetchAndDisplayUrl(r.url),
+          }),
+          el("button", {
+            class: "btn btn-ghost btn-sm",
+            text: "🚀 Feed to Swarm",
+            onclick: () => {
+              $("#goal-input").value = `Implement feature using research on ${r.title}:\n${r.snippet || ""}\nSource: ${r.url}`;
+              activateView("swarm");
+              toast("Fed research into Swarm goal!", "ok");
+            },
+          }),
+        ]),
+      ]);
+      container.appendChild(card);
+    });
+  } catch (err) {
+    statusEl.textContent = "Search error";
+    container.innerHTML = `<div class="notice notice-warn">Failed to execute web search: ${err.message}</div>`;
+  }
+}
+
+async function fetchAndDisplayUrl(url) {
+  if (!url) return;
+  const readerCard = $("#article-reader-card");
+  const readerTitle = $("#reader-title");
+  const readerMeta = $("#reader-meta");
+  const readerContent = $("#reader-content");
+
+  readerCard.style.display = "block";
+  readerTitle.textContent = "📄 Fetching webpage…";
+  readerMeta.textContent = url;
+  readerContent.textContent = "Extracting clean markdown text…";
+
+  try {
+    const data = await api("/api/fetch-url", {
+      method: "POST",
+      body: { url, max_chars: 12000 },
+    });
+
+    currentMarkdown = data.markdown || "";
+    readerTitle.textContent = `📄 ${data.title || "Webpage Content"}`;
+    readerMeta.textContent = `HTTP ${data.status_code} · ${currentMarkdown.length} chars · ${url}`;
+    readerContent.textContent = currentMarkdown || "(No textual content extracted)";
+    toast("Webpage extracted successfully.", "ok");
+  } catch (err) {
+    readerTitle.textContent = "✘ Extraction failed";
+    readerContent.textContent = `Error: ${err.message}`;
+    toast(`Extraction error: ${err.message}`, "err");
+  }
+}
+
+async function probeLocalhostServer() {
+  const url = $("#localhost-url").value.trim() || "http://localhost:3000";
+  const box = $("#localhost-result-box");
+  box.innerHTML = `<div class="muted small">Probing ${url}…</div>`;
+
+  try {
+    const data = await api("/api/browser/validate-localhost", {
+      method: "POST",
+      body: { url },
+    });
+
+    const isOk = data.is_healthy;
+    const badgeCls = isOk ? "ok" : "err";
+    const badgeText = isOk ? "HEALTHY" : "ERRORS DETECTED";
+
+    box.innerHTML = "";
+    const header = el("div", { class: "probe-header" }, [
+      el("strong", { text: data.url }),
+      el("span", { class: `probe-badge ${badgeCls}`, text: badgeText }),
+    ]);
+
+    const details = el("div", { class: "small muted" }, [
+      el("div", { text: `Status Code: ${data.status_code} · Latency: ${data.latency_ms.toFixed(1)}ms` }),
+      el("div", { text: `Page Title: ${data.title || "N/A"}` }),
+    ]);
+
+    box.appendChild(header);
+    box.appendChild(details);
+
+    if (data.errors_detected && data.errors_detected.length > 0) {
+      const errorList = el("div", { class: "error-banner-list" });
+      data.errors_detected.forEach((err) => {
+        errorList.appendChild(el("div", { class: "error-item", text: `• ${err}` }));
+      });
+      box.appendChild(errorList);
+
+      const fixBtn = el("button", {
+        class: "btn btn-primary btn-sm mt",
+        text: "🛠️ Auto-Fix Errors with Swarm",
+        onclick: () => {
+          $("#goal-input").value = `Fix runtime dev-server errors on ${data.url}:\n${data.errors_detected.join("\n")}`;
+          activateView("swarm");
+          toast("Dev-server errors transferred to Swarm goal!", "ok");
+        },
+      });
+      box.appendChild(fixBtn);
+    } else {
+      box.appendChild(
+        el("div", {
+          class: "small text-muted mt",
+          text: "✔ Clean runtime: No compilation or crash banners detected in server response.",
+        })
+      );
+    }
+  } catch (err) {
+    box.innerHTML = `<div class="notice notice-warn">Failed to connect to ${url}: ${err.message}</div>`;
+  }
+}
+
+/* ────────────────────────── github issues view ────────────────────────── */
+
+state.githubIssues = [];
+state.githubLoaded = false;
+state.selectedIssue = null;
+
+async function loadGithubIssues() {
+  const stateFilter = $("#github-state-filter").value;
+  const container = $("#github-issues-container");
+  container.innerHTML = '<div class="muted small">Loading repository issues…</div>';
+
+  try {
+    const issues = await api(`/api/github/issues?state=${stateFilter}`);
+    state.githubIssues = issues;
+    state.githubLoaded = true;
+    container.innerHTML = "";
+
+    if (!issues.length) {
+      container.innerHTML = '<div class="card"><p class="muted">No issues found for this repository state.</p></div>';
+      return;
+    }
+
+    issues.forEach((iss) => {
+      const card = el("div", {
+        class: `issue-card${state.selectedIssue?.number === iss.number ? " is-selected" : ""}`,
+        onclick: () => selectGithubIssue(iss),
+      });
+
+      const topRow = el("div", { class: "issue-meta-row" }, [
+        el("div", { class: "issue-title", text: `#${iss.number} ${iss.title}` }),
+        el("span", {
+          class: `tag ${iss.state === "open" ? "tag-ok" : "tag-off"}`,
+          text: iss.state.toUpperCase(),
+        }),
+      ]);
+
+      const excerptText = iss.body ? iss.body.split("\n")[0].slice(0, 100) : "No description provided.";
+      const excerpt = el("p", { class: "muted small", text: excerptText });
+
+      const labelsRow = el("div", { class: "issue-labels" });
+      (iss.labels || []).forEach((lbl) => {
+        labelsRow.appendChild(el("span", { class: "issue-label", text: lbl }));
+      });
+
+      card.appendChild(topRow);
+      card.appendChild(excerpt);
+      if (iss.labels && iss.labels.length) card.appendChild(labelsRow);
+      container.appendChild(card);
+    });
+  } catch (err) {
+    container.innerHTML = `<div class="notice notice-warn">Failed to load GitHub issues: ${err.message}</div>`;
+  }
+}
+
+function selectGithubIssue(issue) {
+  state.selectedIssue = issue;
+  $$(".issue-card").forEach((c) => c.classList.remove("is-selected"));
+  event?.currentTarget?.classList.add("is-selected");
+
+  const panel = $("#github-detail-body");
+  panel.innerHTML = "";
+
+  const titleEl = el("h3", { text: `#${issue.number} ${issue.title}`, class: "section-title" });
+  const metaEl = el("p", {
+    class: "muted small",
+    text: `Author: @${issue.author} · Created: ${issue.created_at || "N/A"}`,
+  });
+
+  const bodyBox = el("pre", {
+    class: "reader-content mt",
+    style: "max-height: 220px;",
+    text: issue.body || "(No body provided)",
+  });
+
+  const actions = el("div", { class: "action-row mt" }, [
+    el("button", {
+      class: "btn btn-primary btn-sm",
+      text: "🌿 Solve in Worktree",
+      onclick: async () => {
+        try {
+          toast(`Provisioning worktree for Issue #${issue.number}…`, "info");
+          const res = await api(`/api/github/issues/${issue.number}/solve`, { method: "POST" });
+          toast(`Worktree provisioned at branch: ${res.branch}`, "ok");
+          logTerminal(`[GITHUB] Provisioned isolated worktree: ${res.worktree_path} (${res.branch})`, "log-success");
+        } catch (err) {
+          toast(`Failed to solve issue: ${err.message}`, "err");
+        }
+      },
+    }),
+    el("button", {
+      class: "btn btn-secondary btn-sm",
+      text: "📦 Generate PR Draft",
+      onclick: async () => {
+        try {
+          const pr = await api(`/api/github/issues/${issue.number}/pr`);
+          bodyBox.textContent = `### PR Title: ${pr.title}\nBranch: ${pr.head_branch} -> ${pr.base_branch}\n\n${pr.body}`;
+          toast("Generated pull request draft!", "ok");
+        } catch (err) {
+          toast(`Failed to generate PR draft: ${err.message}`, "err");
+        }
+      },
+    }),
+    el("button", {
+      class: "btn btn-ghost btn-sm",
+      text: "🚀 Launch in Swarm",
+      onclick: () => {
+        $("#goal-input").value = `Resolve GitHub Issue #${issue.number}: ${issue.title}\nRequirements: ${issue.body || ""}`;
+        activateView("swarm");
+        toast(`Transferred Issue #${issue.number} to Swarm goal!`, "ok");
+      },
+    }),
+  ]);
+
+  panel.appendChild(titleEl);
+  panel.appendChild(metaEl);
+  panel.appendChild(bodyBox);
+  panel.appendChild(actions);
+}
+
+/* ────────────────────────── email hub view ────────────────────────── */
+
+state.mailMessages = [];
+state.mailLoaded = false;
+state.selectedMessage = null;
+
+async function loadMailMessages() {
+  const folder = $("#mail-folder-select").value;
+  const container = $("#mail-list-container");
+  container.innerHTML = '<div class="muted small">Loading messages…</div>';
+
+  try {
+    const msgs = await api(`/api/mail/messages?folder=${folder}`);
+    state.mailMessages = msgs;
+    state.mailLoaded = true;
+    container.innerHTML = "";
+
+    if (!msgs.length) {
+      container.innerHTML = '<div class="card"><p class="muted">No messages in this folder.</p></div>';
+      return;
+    }
+
+    msgs.forEach((m) => {
+      const card = el("div", {
+        class: `mail-card${state.selectedMessage?.id === m.id ? " is-selected" : ""}`,
+        onclick: () => selectMailMessage(m),
+      });
+
+      const topRow = el("div", { class: "mail-meta-row" }, [
+        el("div", { class: "mail-subject", text: m.subject }),
+        el("span", { class: "small muted", text: m.received_at ? m.received_at.slice(0, 10) : "" }),
+      ]);
+
+      const senderRow = el("div", { class: "muted small", text: `From: ${m.sender} <${m.sender_email}>` });
+      const snippet = el("p", {
+        class: "muted small mt",
+        text: m.body ? m.body.slice(0, 95) + "…" : "",
+      });
+
+      card.appendChild(topRow);
+      card.appendChild(senderRow);
+      card.appendChild(snippet);
+      container.appendChild(card);
+    });
+  } catch (err) {
+    container.innerHTML = `<div class="notice notice-warn">Failed to load mail messages: ${err.message}</div>`;
+  }
+}
+
+function selectMailMessage(msg) {
+  state.selectedMessage = msg;
+  $$(".mail-card").forEach((c) => c.classList.remove("is-selected"));
+  event?.currentTarget?.classList.add("is-selected");
+
+  const panel = $("#mail-detail-body");
+  panel.innerHTML = "";
+
+  const subject = el("h3", { text: msg.subject, class: "section-title" });
+  const from = el("p", { class: "muted small", text: `From: ${msg.sender} (${msg.sender_email}) · To: ${msg.recipient}` });
+  const bodyText = el("pre", { class: "reader-content mt", style: "max-height: 180px;", text: msg.body });
+
+  const triageContainer = el("div", { id: "mail-triage-container" });
+
+  const actions = el("div", { class: "action-row mt" }, [
+    el("button", {
+      class: "btn btn-secondary btn-sm",
+      text: "🧠 Run AI Triage",
+      onclick: async () => {
+        try {
+          toast("Triaging message with local LLM…", "info");
+          const t = await api(`/api/mail/messages/${msg.id}/triage`, { method: "POST" });
+          renderMailTriage(triageContainer, t);
+          toast("AI Triage complete!", "ok");
+        } catch (err) {
+          toast(`Triage failed: ${err.message}`, "err");
+        }
+      },
+    }),
+    el("button", {
+      class: "btn btn-primary btn-sm",
+      text: "✍️ Draft Safe Response",
+      onclick: () => openDraftComposer(panel, msg),
+    }),
+  ]);
+
+  panel.appendChild(subject);
+  panel.appendChild(from);
+  panel.appendChild(bodyText);
+  panel.appendChild(triageContainer);
+  panel.appendChild(actions);
+}
+
+function renderMailTriage(container, triage) {
+  container.innerHTML = "";
+  const urgencyCls = triage.urgency === "high" || triage.urgency === "critical" ? "urgent" : triage.urgency === "medium" ? "normal" : "low";
+
+  const box = el("div", { class: "triage-box" }, [
+    el("div", { class: "triage-header" }, [
+      el("strong", { text: `Category: ${triage.category.toUpperCase()}` }),
+      el("span", { class: `triage-badge triage-${urgencyCls}`, text: `URGENCY: ${triage.urgency}` }),
+    ]),
+    el("p", { class: "small", text: triage.executive_summary }),
+    el("div", { class: "detail-section" }, [
+      el("h4", { text: "Action Items" }),
+      el("ul", { class: "action-item-list" }, (triage.action_items || []).map((item) => el("li", { text: item }))),
+    ]),
+  ]);
+  container.appendChild(box);
+}
+
+function openDraftComposer(panel, msg) {
+  const composer = el("div", { class: "card mt" }, [
+    el("h4", { text: "Draft Context-Aware Technical Response", class: "section-title compact" }),
+    el("p", { class: "muted small mb", text: "Add optional developer notes or technical constraints to include in the draft." }),
+    el("textarea", {
+      class: "textarea",
+      id: "developer-notes-input",
+      placeholder: "e.g. Advise that fix is deployed in branch feat/auth and will release in v0.2.0…",
+    }),
+    el("div", { class: "action-row mt" }, [
+      el("button", {
+        class: "btn btn-primary btn-sm",
+        text: "⚡ Generate Draft",
+        onclick: async () => {
+          const notes = $("#developer-notes-input").value;
+          try {
+            toast("Generating response draft…", "info");
+            const draft = await api(`/api/mail/messages/${msg.id}/draft`, {
+              method: "POST",
+              body: { developer_notes: notes },
+            });
+            renderDraftResult(composer, draft);
+            toast("Technical draft created safely in Drafts folder!", "ok");
+          } catch (err) {
+            toast(`Failed to draft response: ${err.message}`, "err");
+          }
+        },
+      }),
+    ]),
+  ]);
+  panel.appendChild(composer);
+}
+
+function renderDraftResult(composer, draft) {
+  composer.innerHTML = "";
+  const header = el("div", { class: "triage-header" }, [
+    el("strong", { text: `Draft Ready: [${draft.id}]` }),
+    el("span", { class: "tag tag-vscode", text: "DRAFTS ONLY" }),
+  ]);
+
+  const bodyPre = el("pre", { class: "reader-content mt", style: "max-height: 180px;", text: draft.body });
+
+  const safetyBanner = el("div", { class: "airgap-banner mt" }, [
+    el("span", { class: "airgap-icon", text: "🔒" }),
+    el("div", {
+      text: "Safety Gate Active: Outbound transmission blocked. Check the draft before confirming dispatch.",
+    }),
+  ]);
+
+  const actions = el("div", { class: "action-row mt" }, [
+    el("button", {
+      class: "btn btn-primary btn-sm",
+      text: "✔ Authorize & Dispatch Email",
+      onclick: async () => {
+        if (!confirm(`Are you sure you want to dispatch this email to ${draft.recipient}?`)) return;
+        try {
+          const res = await api(`/api/mail/drafts/${draft.id}/send`, {
+            method: "POST",
+            body: { confirm: true },
+          });
+          toast(`Email safely dispatched to ${res.recipient}!`, "ok");
+          composer.innerHTML = `<div class="notice notice-ok">Email successfully sent to ${res.recipient}.</div>`;
+          loadMailMessages();
+        } catch (err) {
+          toast(`Dispatch failed: ${err.message}`, "err");
+        }
+      },
+    }),
+  ]);
+
+  composer.appendChild(header);
+  composer.appendChild(bodyPre);
+  composer.appendChild(safetyBanner);
+  composer.appendChild(actions);
+}
+
 /* ──────────────────────────────── bootstrap ──────────────────────────────── */
 
 window.addEventListener("DOMContentLoaded", () => {
@@ -613,6 +1071,42 @@ window.addEventListener("DOMContentLoaded", () => {
   $("#btn-config-reset").addEventListener("click", resetConfig);
   $("#btn-config-reload").addEventListener("click", reloadConfig);
   $("#btn-test-provider").addEventListener("click", testProvider);
+
+  // Research view listeners
+  $("#btn-search")?.addEventListener("click", executeSearch);
+  $("#search-input")?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") executeSearch();
+  });
+  $("#btn-fetch-url")?.addEventListener("click", () => fetchAndDisplayUrl($("#fetch-url-input").value.trim()));
+  $("#btn-probe-localhost")?.addEventListener("click", probeLocalhostServer);
+  $("#btn-probe-8000")?.addEventListener("click", () => {
+    $("#localhost-url").value = "http://localhost:8000";
+    probeLocalhostServer();
+  });
+  $("#btn-probe-5173")?.addEventListener("click", () => {
+    $("#localhost-url").value = "http://localhost:5173";
+    probeLocalhostServer();
+  });
+  $("#btn-close-reader")?.addEventListener("click", () => {
+    $("#article-reader-card").style.display = "none";
+  });
+  $("#btn-copy-markdown")?.addEventListener("click", () => {
+    navigator.clipboard.writeText(currentMarkdown);
+    toast("Markdown copied to clipboard!", "ok");
+  });
+  $("#btn-feed-swarm")?.addEventListener("click", () => {
+    $("#goal-input").value = currentMarkdown.slice(0, 500);
+    activateView("swarm");
+    toast("Markdown fed into Swarm goal!", "ok");
+  });
+
+  // GitHub view listeners
+  $("#github-state-filter")?.addEventListener("change", loadGithubIssues);
+  $("#btn-refresh-issues")?.addEventListener("click", loadGithubIssues);
+
+  // Email view listeners
+  $("#mail-folder-select")?.addEventListener("change", loadMailMessages);
+  $("#btn-refresh-mail")?.addEventListener("click", loadMailMessages);
 
   fetchStatus();
   fetchEditors();

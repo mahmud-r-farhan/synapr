@@ -7,7 +7,7 @@
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-brightgreen.svg)]()
 [![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-blue.svg)]()
 [![Privacy: 100% Local](https://img.shields.io/badge/Privacy-100%25%20Local-success.svg)]()
-[![Tests: 162 Passed](https://img.shields.io/badge/Tests-162%20Passed-brightgreen.svg)]()
+[![Tests: 192 Passed](https://img.shields.io/badge/Tests-192%20Passed-brightgreen.svg)]()
 [![Config: Visual + Env](https://img.shields.io/badge/Config-Visual%20%7C%20CLI%20%7C%20Env-8b5cf6.svg)]()
 
 ---
@@ -24,6 +24,9 @@ Modern AI coding agents usually work inside a single terminal window or a single
 
 * **🔒 100% Local-First & Air-Gapped Capable:** Zero external telemetry. Full native support for local engines via **Ollama**, **vLLM**, **LM Studio**, or deterministic offline simulation.
 * **🌐 Universal LLM Gateway:** Toggle between local Ollama instances and remote providers (**OpenRouter**, **Groq**, **OpenAI**, **Anthropic**) with unified routing.
+* **🔍 Live Web Research & Browser Search Engine:** Zero-API-key web search via DuckDuckGo and SearXNG, clean markdown extraction from online docs, and automated loopback dev-server verification (`http://localhost:3000`, `:8000`, `:5173`) with crash banner detection.
+* **🐙 Native GitHub Issue & PR Lifecycle Tracker:** 1-click issue sync, automated worktree provisioning on feature branch `synapr/issue-<number>`, injected `AGENT_INSTRUCTIONS.md`, and automated PR draft generator linking `Closes #<number>`.
+* **✉️ Intelligent Email Gateway & Safe Draft Assistant:** Local mailbox triage classifying urgency and categories, action item extraction, and context-aware technical response drafting protected by a mandatory developer confirmation lock.
 * **🌿 Zero Race Conditions with Git Worktrees:** Provisions independent `.worktrees/<task-id>` directories on isolated feature branches rather than sharing the working tree.
 * **🖥️ Host Environment Discovery:** Automatically scans Windows, macOS, and Linux system paths to discover installed editors:
   * Visual Studio Code (`code`) & VS Code Insiders
@@ -36,7 +39,7 @@ Modern AI coding agents usually work inside a single terminal window or a single
 * **🧠 Multi-Agent Consensus Debate:** Subtasks are evaluated by a planner model and cross-examined by adversarial reviewer models before execution begins to prevent flawed architectural designs.
 * **👁️ Optical Screen Perception:** Native window inspection, screen capture, and OCR pattern extraction for compiler warnings, syntax errors, and test pass/fail signals.
 * **🧪 Automated Test & Self-Healing Merge Pipeline:** Runs local test suites per worktree (`pytest`, `cargo test`, `npm test`, `gradle check`) and auto-resolves merge conflicts using an LLM self-healing loop.
-* **💻 Dual Control Interfaces:** High-productivity Click CLI + Real-Time SSE Web Dashboard.
+* **💻 Dual Control Interfaces:** High-productivity Click CLI + Real-Time SSE Web Dashboard with dedicated Swarm, Research & Browser, GitHub Issues, Email Hub, Configuration, and Environment tabs.
 * **🎛️ Zero-Friction Visual Configuration:** Configure *everything* — providers, endpoints, API keys, per-role models, worktree isolation, editor mapping, perception and the merge pipeline — from the dashboard **while Synapr is running**, declare the same settings as `SYNAPR_*` environment variables, or edit `synapr.config.json`. Changes hot-swap the live orchestrator; secrets are always redacted over the wire.
 
 ---
@@ -169,6 +172,9 @@ synapr ui                      # honours ui.host / ui.port, --no-open-browser to
 Navigate to `http://127.0.0.1:8765`:
 
 * **🚀 Swarm** — dispatch goals, watch worktrees, consensus debate rounds and streaming telemetry.
+* **🌐 Research & Browser** — query live web search engines (zero API keys), extract clean markdown from online documentation, and probe local dev servers for compilation crashes.
+* **🐙 GitHub Issues** — inspect repository issues, provision isolated worktrees with tailored instructions (`AGENT_INSTRUCTIONS.md`), and auto-generate pull request drafts.
+* **✉️ Email Hub** — triage customer requirements, extract actionable items, and compose technical response drafts guarded by a strict confirmation safety lock.
 * **⚙️ Configuration** — a form generated from the live schema for every setting, with validation,
   provider connectivity tests, *Apply* (runtime only) and *Save* (writes `synapr.config.json`).
 * **🔐 Environment** — browse the full `SYNAPR_*` registry and declare variables after start-up,
@@ -185,6 +191,16 @@ Navigate to `http://127.0.0.1:8765`:
 | `synapr status` | Prints current git branch, active worktree count, and LLM provider status. |
 | `synapr plan "<goal>"` | Runs planning decomposition & multi-LLM debate without launching IDEs. |
 | `synapr run "<goal>"` | Executes end-to-end swarm loop (plan, debate, provision, dispatch, test, merge). |
+| `synapr search "<query>"` | Searches the web via DuckDuckGo/SearXNG with zero API keys. |
+| `synapr fetch "<url>"` | Fetches an arbitrary webpage and outputs clean markdown text for analysis. |
+| `synapr test-url [url]` | Inspects local dev server health and scans for crash/compilation banners. |
+| `synapr issue list` | Lists open/closed GitHub issues for the local repository. |
+| `synapr issue solve <num>` | Provisions an isolated worktree and generates `AGENT_INSTRUCTIONS.md`. |
+| `synapr issue pr <num>` | Generates a structured PR description with `Closes #<num>` reference. |
+| `synapr mail list` | Lists incoming customer/client messages from the local mailbox. |
+| `synapr mail triage <id>` | Classifies email urgency, category, and extracts actionable tasks. |
+| `synapr mail draft <id>` | Generates a context-aware technical response saved to Drafts. |
+| `synapr mail send <id> --confirm` | Safely dispatches an approved draft (mandatory confirmation lock). |
 | `synapr worktree list` | Lists all active git worktrees tracked by Synapr. |
 | `synapr worktree clean` | Prunes and cleans stale worktree directories. |
 | `synapr ui` | Boots the local dashboard + visual configurator on port `8765`. |

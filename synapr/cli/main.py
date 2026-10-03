@@ -389,6 +389,293 @@ def config_test(ctx: click.Context, provider: str | None) -> None:
 
 
 # --------------------------------------------------------------------------------------
+# Web Search & Browser Research Commands (FUTURE_EXPANSIONS.md #3)
+# --------------------------------------------------------------------------------------
+
+
+@main.command()
+@click.argument("query", required=True)
+@click.option("--limit", "-n", default=5, type=int, help="Maximum number of search results (default: 5).")
+@click.option(
+    "--engine",
+    default="duckduckgo",
+    type=click.Choice(["duckduckgo", "searxng"]),
+    help="Search provider.",
+)
+@click.option("--json", "as_json", is_flag=True, default=False, help="Output results as JSON.")
+@click.pass_context
+def search(ctx: click.Context, query: str, limit: int, engine: str, as_json: bool) -> None:
+    """Search the web for up-to-date documentation, solutions, or live data."""
+    from synapr.browser.search import search_web
+
+    cfg = _service(ctx).config
+    searxng_url = cfg.browser.searxng_url
+    results = search_web(query, engine=engine, max_results=limit, searxng_url=searxng_url)
+
+    if as_json:
+        click.echo(json.dumps([r.model_dump() for r in results], indent=2))
+        return
+
+    click.echo(click.style(f"\n🌐 Search results for: '{query}' ({len(results)} found)\n", bold=True, fg="cyan"))
+    if not results:
+        click.echo("  No results found.")
+        return
+
+    for i, r in enumerate(results, 1):
+        click.echo(f"  {click.style(str(i) + '.', bold=True)} {click.style(r.title, bold=True, fg='white')}")
+        click.echo(f"     URL: {click.style(r.url, fg='bright_black')}")
+        if r.snippet:
+            click.echo(f"     {r.snippet}")
+        click.echo("")
+
+
+@main.command()
+@click.argument("url", required=True)
+@click.option("--max-chars", default=8000, type=int, help="Maximum characters to extract.")
+@click.option("--json", "as_json", is_flag=True, default=False, help="Output as JSON.")
+def fetch(url: str, max_chars: int, as_json: bool) -> None:
+    """Fetch an arbitrary webpage and extract clean markdown content."""
+    from synapr.browser.search import fetch_webpage
+
+    page = fetch_webpage(url, max_chars=max_chars)
+    if as_json:
+        click.echo(json.dumps(page.model_dump(), indent=2))
+        return
+
+    click.echo(click.style(f"\n📄 {page.title or url}", bold=True, fg="cyan"))
+    click.echo(f"  URL: {page.url} (Status: {page.status_code})")
+    click.echo("=" * 60)
+    click.echo(page.markdown)
+    click.echo("=" * 60 + "\n")
+
+
+@main.command("test-url")
+@click.argument("url", default="http://localhost:3000")
+@click.option("--json", "as_json", is_flag=True, default=False, help="Output as JSON.")
+def test_url(url: str, as_json: bool) -> None:
+    """Inspect local development server health and detect build/runtime errors."""
+    from synapr.browser.engine import validate_localhost
+
+    res = validate_localhost(url)
+    if as_json:
+        click.echo(json.dumps(res.model_dump(), indent=2))
+        return
+
+    icon = click.style("✔", fg="green") if res.is_healthy else click.style("✘", fg="red")
+    click.echo(f"\n{icon} Dev-Server Check: {url}")
+    click.echo(f"   Status Code: {res.status_code}")
+    click.echo(f"   Title:       {res.title or 'N/A'}")
+    click.echo(f"   Latency:     {res.latency_ms:.1f}ms")
+    if res.errors_detected:
+        click.echo(click.style(f"   Errors Detected ({len(res.errors_detected)}):", fg="red", bold=True))
+        for err in res.errors_detected:
+            click.echo(f"     • {err}")
+    else:
+        click.echo(click.style("   Clean runtime: No common crash banners detected.", fg="green"))
+    click.echo("")
+
+
+# --------------------------------------------------------------------------------------
+# GitHub Issue & Worktree Lifecycle Commands (FUTURE_EXPANSIONS.md #5)
+# --------------------------------------------------------------------------------------
+
+
+@main.group()
+def issue() -> None:
+    """Manage GitHub repository issues and autonomous worktree provisioning."""
+
+
+@issue.command("list")
+@click.option("--state", default="open", type=click.Choice(["open", "closed", "all"]), help="Issue state.")
+@click.option("--limit", default=10, type=int, help="Maximum issues to list.")
+@click.option("--repo", default=None, help="Target GitHub repo (e.g. owner/repo).")
+@click.option("--json", "as_json", is_flag=True, default=False, help="Output as JSON.")
+def issue_list(state: str, limit: int, repo: str | None, as_json: bool) -> None:
+    """List GitHub issues for the repository."""
+    from synapr.github.service import GitHubIssueService
+
+    svc = GitHubIssueService(repo_override=repo)
+    issues = svc.list_issues(state=state, limit=limit)
+    if as_json:
+        click.echo(json.dumps([i.model_dump() for i in issues], indent=2))
+        return
+
+    click.echo(click.style(f"\n🐙 GitHub Issues ({len(issues)} found):\n", bold=True, fg="magenta"))
+    if not issues:
+        click.echo("  No issues found.")
+        return
+
+    for iss in issues:
+        st = click.style(f"[{iss.state.upper()}]", fg="green" if iss.state == "open" else "bright_black")
+        lbls = f" ({', '.join(iss.labels)})" if iss.labels else ""
+        click.echo(f"  #{click.style(str(iss.number), bold=True)} {st} {iss.title}{lbls}")
+        if iss.body:
+            summary = iss.body.splitlines()[0][:90]
+            click.echo(f"     {click.style(summary, fg='bright_black')}")
+    click.echo("")
+
+
+@issue.command("solve")
+@click.argument("number", type=int, required=True)
+@click.option("--editor", default="default", help="Target editor ID for the worktree.")
+@click.option("--repo", default=None, help="Target GitHub repo.")
+@click.pass_context
+def issue_solve(ctx: click.Context, number: int, editor: str, repo: str | None) -> None:
+    """Provision a dedicated isolated worktree and instructions for solving an issue."""
+    from synapr.github.service import GitHubIssueService
+
+    orch = _orchestrator(ctx)
+    svc = GitHubIssueService(worktree_manager=orch.worktree_mgr, repo_override=repo)
+
+    async def _solve() -> None:
+        try:
+            res = await svc.solve_issue_in_worktree(number, target_editor=editor)
+            click.echo(click.style(f"\n✔ Worktree provisioned for Issue #{number}!", fg="green", bold=True))
+            click.echo(f"   Branch:       {res['branch']}")
+            click.echo(f"   Worktree Dir: {res['worktree_path']}")
+            click.echo(f"   Brief:        {res.get('instructions_file') or res.get('instruction_file')}")
+            click.echo("\n  Autonomous subtask prepared. Run `synapr run` or open the editor to solve.\n")
+        except Exception as exc:
+            raise click.ClickException(str(exc)) from exc
+
+    asyncio.run(_solve())
+
+
+@issue.command("pr")
+@click.argument("number", type=int, required=True)
+@click.option("--repo", default=None, help="Target GitHub repo.")
+@click.option("--json", "as_json", is_flag=True, default=False, help="Output as JSON.")
+def issue_pr(number: int, repo: str | None, as_json: bool) -> None:
+    """Generate a clean, structured pull request description for an issue."""
+    from synapr.github.service import GitHubIssueService
+
+    svc = GitHubIssueService(repo_override=repo)
+    draft = svc.prepare_pr_for_issue(number)
+    if as_json:
+        click.echo(json.dumps(draft.model_dump(), indent=2))
+        return
+
+    click.echo(click.style(f"\n📦 Pull Request Draft for Issue #{number}\n", bold=True, fg="cyan"))
+    click.echo(f"Title:  {draft.title}")
+    click.echo(f"Branch: {draft.head_branch} -> {draft.base_branch}")
+    click.echo("-" * 60)
+    click.echo(draft.body)
+    click.echo("-" * 60 + "\n")
+
+
+# --------------------------------------------------------------------------------------
+# Email Gateway & Safe Drafting Commands (FUTURE_EXPANSIONS.md #4)
+# --------------------------------------------------------------------------------------
+
+
+@main.group()
+def mail() -> None:
+    """Triage incoming emails and generate context-aware response drafts safely."""
+
+
+@mail.command("list")
+@click.option("--folder", default="inbox", help="Mailbox folder (default: inbox).")
+@click.option("--json", "as_json", is_flag=True, default=False, help="Output as JSON.")
+def mail_list(folder: str, as_json: bool) -> None:
+    """List incoming engineering and client messages."""
+    from synapr.email_gateway.service import EmailGatewayService
+
+    svc = EmailGatewayService()
+    msgs = svc.list_messages(folder=folder)
+    if as_json:
+        click.echo(json.dumps([m.model_dump() for m in msgs], indent=2))
+        return
+
+    click.echo(click.style(f"\n✉️  Messages in [{folder}] ({len(msgs)} total):\n", bold=True, fg="yellow"))
+    if not msgs:
+        click.echo("  No messages in folder.")
+        return
+
+    for m in msgs:
+        click.echo(f"  [{click.style(m.id, bold=True)}] From: {m.sender} <{m.sender_email}>")
+        click.echo(f"   Subject: {click.style(m.subject, bold=True)}")
+        click.echo(f"   Date:    {m.received_at}")
+        snippet = m.body.splitlines()[0][:80] if m.body else ""
+        click.echo(f"   Preview: {click.style(snippet, fg='bright_black')}\n")
+
+
+@mail.command("triage")
+@click.argument("message_id", required=True)
+@click.option("--json", "as_json", is_flag=True, default=False, help="Output as JSON.")
+def mail_triage(message_id: str, as_json: bool) -> None:
+    """Analyze and triage an email into priority, category, and action items."""
+    from synapr.email_gateway.service import EmailGatewayService
+
+    svc = EmailGatewayService()
+    try:
+        triage = svc.triage_message(message_id)
+    except ValueError as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    if as_json:
+        click.echo(json.dumps(triage.model_dump(), indent=2))
+        return
+
+    click.echo(click.style(f"\n📋 Triage Analysis for {message_id}\n", bold=True, fg="cyan"))
+    click.echo(f"  Category: {triage.category.upper()} | Priority: {click.style(triage.urgency.upper(), bold=True)}")
+    click.echo(f"  Summary:  {triage.executive_summary}")
+    if triage.action_items:
+        click.echo(click.style("\n  Action Items:", bold=True))
+        for item in triage.action_items:
+            click.echo(f"    • {item}")
+    click.echo("")
+
+
+@mail.command("draft")
+@click.argument("message_id", required=True)
+@click.option("--notes", default="", help="Developer notes or technical solution constraints.")
+@click.option("--json", "as_json", is_flag=True, default=False, help="Output as JSON.")
+def mail_draft(message_id: str, notes: str, as_json: bool) -> None:
+    """Generate a high-quality technical response draft saved to Drafts."""
+    from synapr.email_gateway.service import EmailGatewayService
+
+    svc = EmailGatewayService()
+    try:
+        draft = svc.generate_draft(message_id, developer_notes=notes)
+    except ValueError as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    if as_json:
+        click.echo(json.dumps(draft.model_dump(), indent=2))
+        return
+
+    click.echo(click.style(f"\n📝 Created Draft [{draft.id}] for {draft.recipient}\n", bold=True, fg="green"))
+    click.echo(f"Subject: {draft.subject}")
+    click.echo(f"Status:  {draft.status} (Safety Lock: Active)")
+    click.echo("-" * 60)
+    click.echo(draft.body)
+    click.echo("-" * 60)
+    click.echo(f"  To send this draft, run: synapr mail send {draft.id} --confirm\n")
+
+
+@mail.command("send")
+@click.argument("draft_id", required=True)
+@click.option("--confirm", is_flag=True, default=False, help="Confirm dispatch (safety lock).")
+def mail_send(draft_id: str, confirm: bool) -> None:
+    """Safely dispatch an approved email draft (requires --confirm flag)."""
+    from synapr.email_gateway.service import EmailGatewayService
+
+    svc = EmailGatewayService()
+    try:
+        res = svc.send_draft(draft_id, confirm=confirm)
+        target = res.get("recipient") or res.get("to")
+        sent_time = res.get("sent_at") or res.get("dispatched_at")
+        click.echo(click.style(f"\n✔ Email {draft_id} safely sent to {target}!", fg="green", bold=True))
+        click.echo(f"   Archived in sent mailbox at {sent_time}\n")
+    except RuntimeError as exc:
+        click.echo(click.style(f"\n🔒 Safety Lock: {exc}", fg="yellow", bold=True))
+        click.echo("   Run again with --confirm to authorize dispatch.\n")
+        raise click.exceptions.Exit(1) from exc
+    except ValueError as exc:
+        raise click.ClickException(str(exc)) from exc
+
+
+# --------------------------------------------------------------------------------------
 # Dashboard
 # --------------------------------------------------------------------------------------
 
