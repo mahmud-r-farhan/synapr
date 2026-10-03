@@ -29,21 +29,61 @@ dependencies = [
 dev = [
     "pytest>=8.0.0",
     "pytest-cov>=4.0.0",
+    "httpx>=0.24.0",
     "ruff>=0.1.0",
     "mypy>=1.0.0"
 ]
 
+[project.urls]
+Homepage = "https://github.com/mahmud-r-farhan/synapr"
+Repository = "https://github.com/mahmud-r-farhan/synapr"
+Issues = "https://github.com/mahmud-r-farhan/synapr/issues"
+
 [project.scripts]
 synapr = "synapr.cli.main:main"
+
+[tool.setuptools.packages.find]
+include = ["synapr*"]
+
+[tool.setuptools.package-data]
+synapr = ["web/static/*", "assets/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
+addopts = "--strict-markers"
+filterwarnings = ["ignore::DeprecationWarning"]
 
 [tool.ruff]
 line-length = 100
-target-version = "py312"
+target-version = "py311"
 
 [tool.ruff.lint]
-select = ["E", "F", "W", "I"]
-ignore = ["E501"]
+select = ["E", "F", "W", "I", "UP", "B", "C4", "SIM"]
+# E501: long lines are handled by review, not the linter.
+# B008: FastAPI/Click rely on calls in default arguments.
+# SIM105: explicit try/except pass blocks document intent better here.
+# UP042: `str, Enum` members stay JSON/serialisation compatible with pydantic.
+ignore = ["E501", "B008", "SIM105", "UP042"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["B011"]
+
+[tool.mypy]
+python_version = "3.11"
+warn_unused_configs = true
+ignore_missing_imports = true
+show_error_codes = true
+pretty = true
+exclude = ["^build/", "^dist/"]
+
+[tool.coverage.run]
+source = ["synapr"]
+omit = ["synapr/__main__.py"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+]

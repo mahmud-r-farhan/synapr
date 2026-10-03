@@ -7,7 +7,8 @@
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-brightgreen.svg)]()
 [![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-blue.svg)]()
 [![Privacy: 100% Local](https://img.shields.io/badge/Privacy-100%25%20Local-success.svg)]()
-[![Tests: 30 Passed](https://img.shields.io/badge/Tests-30%20Passed-brightgreen.svg)]()
+[![Tests: 162 Passed](https://img.shields.io/badge/Tests-162%20Passed-brightgreen.svg)]()
+[![Config: Visual + Env](https://img.shields.io/badge/Config-Visual%20%7C%20CLI%20%7C%20Env-8b5cf6.svg)]()
 
 ---
 
@@ -36,6 +37,7 @@ Modern AI coding agents usually work inside a single terminal window or a single
 * **👁️ Optical Screen Perception:** Native window inspection, screen capture, and OCR pattern extraction for compiler warnings, syntax errors, and test pass/fail signals.
 * **🧪 Automated Test & Self-Healing Merge Pipeline:** Runs local test suites per worktree (`pytest`, `cargo test`, `npm test`, `gradle check`) and auto-resolves merge conflicts using an LLM self-healing loop.
 * **💻 Dual Control Interfaces:** High-productivity Click CLI + Real-Time SSE Web Dashboard.
+* **🎛️ Zero-Friction Visual Configuration:** Configure *everything* — providers, endpoints, API keys, per-role models, worktree isolation, editor mapping, perception and the merge pipeline — from the dashboard **while Synapr is running**, declare the same settings as `SYNAPR_*` environment variables, or edit `synapr.config.json`. Changes hot-swap the live orchestrator; secrets are always redacted over the wire.
 
 ---
 
@@ -115,7 +117,22 @@ Modern AI coding agents usually work inside a single terminal window or a single
 ## 📦 Quick Start
 
 ### 1. Installation
-Clone the repository and install with pip:
+
+#### Option A: Standalone Native Installers (Recommended)
+Pre-built native packages are available on the [GitHub Releases](https://github.com/mahmud-r-farhan/synapr/releases) page:
+* **Windows (`Synapr-Setup-x64-v0.1.0.exe`)**:
+  * Double-click installer wizard ("Next Next Next")
+  * Displays the full MIT License agreement
+  * Desktop shortcut and Start Menu shortcut toggles (ON/OFF)
+  * PATH environment variable integration for instant CLI access
+  * Highlights 100% local execution guarantee (Zero Data Leak)
+* **Linux (`synapr_0.1.0_amd64.deb` or `.tar.gz`)**:
+  * Debian/Ubuntu package with desktop menu entry and scalable icon
+  * Install via `sudo dpkg -i synapr_0.1.0_amd64.deb` or extract portable tarball
+* **macOS (`synapr-macos-arm64-v0.1.0.tar.gz`)**:
+  * Standalone portable distribution for Apple Silicon & Intel
+
+#### Option B: Install via Python / pip
 ```bash
 git clone https://github.com/mahmud-r-farhan/synapr
 cd synapr
@@ -144,12 +161,18 @@ synapr run "Build OAuth2 JWT auth with refresh tokens" --dry-run
 synapr run "Build OAuth2 JWT auth with refresh tokens"
 ```
 
-### 5. Launch the Web Dashboard
+### 5. Launch the Web Dashboard & Visual Configurator
 Start the real-time local control center in your browser:
 ```bash
-synapr ui
+synapr ui                      # honours ui.host / ui.port, --no-open-browser to stay headless
 ```
-Navigate to `http://127.0.0.1:8765` to monitor active worktrees, live consensus debate rounds, and streaming telemetry logs.
+Navigate to `http://127.0.0.1:8765`:
+
+* **🚀 Swarm** — dispatch goals, watch worktrees, consensus debate rounds and streaming telemetry.
+* **⚙️ Configuration** — a form generated from the live schema for every setting, with validation,
+  provider connectivity tests, *Apply* (runtime only) and *Save* (writes `synapr.config.json`).
+* **🔐 Environment** — browse the full `SYNAPR_*` registry and declare variables after start-up,
+  optionally persisting them to a git-ignored `.env`.
 
 ---
 
@@ -164,11 +187,40 @@ Navigate to `http://127.0.0.1:8765` to monitor active worktrees, live consensus 
 | `synapr run "<goal>"` | Executes end-to-end swarm loop (plan, debate, provision, dispatch, test, merge). |
 | `synapr worktree list` | Lists all active git worktrees tracked by Synapr. |
 | `synapr worktree clean` | Prunes and cleans stale worktree directories. |
-| `synapr ui` | Boots up the local FastAPI web dashboard on port `8765`. |
+| `synapr ui` | Boots the local dashboard + visual configurator on port `8765`. |
+| `synapr config show [--json] [--reveal]` | Prints the effective configuration and where each value came from. |
+| `synapr config get/set/unset <path> [value]` | Reads or edits a single setting (`gateway.planner_model`, `ui.port`, …). |
+| `synapr config env [--all] [--example]` | Lists every supported environment variable or emits a `.env` template. |
+| `synapr config test [--provider]` | Probes the configured LLM endpoint and lists available models. |
+| `synapr config validate` / `config path` | Validates the config file / prints which file is used. |
 
 ---
 
-## ⚙️ Configuration (`synapr.config.json`)
+## ⚙️ Configuration
+
+Three interchangeable layers, applied in order — **defaults → `synapr.config.json` → `.env` → environment variables** —
+plus a visual editor that can change anything at runtime. Full reference: **[docs/CONFIGURATION.md](docs/CONFIGURATION.md)**.
+
+```bash
+# 1. Visually, after the run (hot-applies to the live orchestrator)
+synapr ui                      # → Configuration / Environment tabs
+
+# 2. From the terminal
+synapr config set gateway.default_provider ollama
+synapr config set gateway.planner_model qwen2.5-coder:7b
+
+# 3. As environment variables (or a git-ignored .env file)
+export SYNAPR_PROVIDER=ollama
+export SYNAPR_PLANNER_MODEL=qwen2.5-coder:7b
+export SYNAPR_OLLAMA_BASE_URL=http://localhost:11434
+synapr config env --example > .env      # documented template for every variable
+```
+
+Secrets (`SYNAPR_OPENAI_API_KEY`, `OPENAI_API_KEY`, `OPENROUTER_API_KEY`, `GROQ_API_KEY`, …) are
+redacted in every API response, log line and CLI output, and values provided by the environment are
+never written into `synapr.config.json`.
+
+### `synapr.config.json`
 
 ```json
 {
@@ -205,6 +257,13 @@ Navigate to `http://127.0.0.1:8765` to monitor active worktrees, live consensus 
     "auto_test": true,
     "auto_merge": true,
     "max_self_healing_attempts": 3
+  },
+  "ui": {
+    "host": "127.0.0.1",
+    "port": 8765,
+    "auto_open_browser": true,
+    "allow_config_writes": true,
+    "allow_remote_origins": false
   }
 }
 ```
@@ -213,10 +272,23 @@ Navigate to `http://127.0.0.1:8765` to monitor active worktrees, live consensus 
 
 ## 🧪 Running Tests
 
-Run the complete 30-test suite locally:
 ```bash
-pytest tests/ -v
+pytest tests/ -v                       # 148 unit & integration tests
+pytest tests/ --cov=synapr             # coverage report
+ruff check . && mypy synapr            # lint + static types
+python scripts/smoke_test.py           # end-to-end CLI + dashboard smoke test
 ```
+
+Continuous integration runs on every push and pull request:
+
+| Workflow | What it guards |
+| :--- | :--- |
+| `ci.yml` | Test matrix (Python 3.11–3.14 × Linux/macOS/Windows), coverage gate, wheel build & asset packaging. |
+| `lint.yml` | Ruff, mypy, dashboard JS syntax and the “no remote assets” air-gap rule. |
+| `smoke.yml` | Real CLI + dashboard end-to-end run on three operating systems, plus an environment-variable matrix. |
+| `security.yml` | `pip-audit`, `bandit`, secret-leakage guard and committed-`.env` check. |
+| `codeql.yml` | GitHub CodeQL security & quality analysis. |
+| `dependency-review.yml` | Blocks pull requests introducing high-severity dependency advisories. |
 
 ---
 

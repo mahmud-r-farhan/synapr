@@ -1,0 +1,107 @@
+name: Security
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+  workflow_dispatch:
+  schedule:
+    - cron: "0 6 * * 1"
+
+concurrency:
+  group: security-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    name: Dependency audit (pip-audit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install project and auditor
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install . pip-audit
+
+      - name: Audit installed dependencies
+        run: |
+          # Audit the resolved dependency set. Synapr itself is excluded because
+          # the local build is not published on PyPI and --strict would abort.
+          python -m pip freeze --exclude-editable | grep -v -i "^synapr" > audit-requirements.txt
+          cat audit-requirements.txt
+          pip-audit --strict --progress-spinner off --requirement audit-requirements.txt
+
+  bandit:
+    name: Static security analysis (bandit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install bandit
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install bandit
+
+      - name: Scan for high severity issues
+        run: bandit -r synapr -ll -ii
+
+  secrets:
+    name: Secret leakage guard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install project
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install .
+
+      - name: API keys must never be logged, dumped or served
+        run: |
+          python - <<'PY'
+          import json
+          from synapr.config import SynaprConfig
+          from synapr.core.config_service import ConfigService
+          from synapr.core.logger import SanitizingFormatter
+          import logging
+
+          secret = "sk-this-should-never-leak-0001"
+          service = ConfigService(config=SynaprConfig())
+          service.update({"gateway": {"openai_api_key": secret}}, persist=False)
+
+          snapshot = json.dumps(service.snapshot())
+          assert secret not in snapshot, "secret leaked through /api/config"
+          assert secret not in json.dumps(service.schema()), "secret leaked through the UI schema"
+          assert secret not in json.dumps(service.env_report()), "secret leaked through env report"
+
+          record = logging.LogRecord("synapr", logging.INFO, __file__, 1,
+                                     f"Authorization: Bearer {secret}", None, None)
+          rendered = SanitizingFormatter("%(message)s").format(record)
+          assert secret not in rendered, f"secret leaked through logs: {rendered}"
+          print("No secret leakage detected.")
+          PY
+
+      - name: Repository must not contain committed .env files
+        run: |
+          if git ls-files | grep -E '(^|/)\.env$'; then
+            echo "A .env file is committed to the repository." >&2
+            exit 1
+          fi
+          echo "No committed .env files."
