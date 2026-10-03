@@ -1,0 +1,314 @@
+"""Cross-platform Host Environment Discovery for installed IDEs and AI tools."""
+
+import os
+import platform
+import shutil
+import subprocess
+from pathlib import Path
+from typing import Dict, List, Optional
+from synapr.core.logger import logger
+from synapr.core.models import EditorInfo, EditorType
+
+
+class EditorDetector:
+    """Discovers available code editors and AI development tools on the host system."""
+
+    # Well-known candidate definitions
+    KNOWN_EDITORS = [
+        {
+            "id": "vscode",
+            "name": "Visual Studio Code",
+            "type": EditorType.VSCODE,
+            "executables": ["code", "code.cmd", "code.exe"],
+            "windows_paths": [
+                r"%LOCALAPPDATA%\Programs\Microsoft VS Code\Code.exe",
+                r"%LOCALAPPDATA%\Programs\Microsoft VS Code\bin\code.cmd",
+                r"%PROGRAMFILES%\Microsoft VS Code\Code.exe",
+                r"%PROGRAMFILES%\Microsoft VS Code\bin\code.cmd",
+            ],
+            "mac_paths": [
+                "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code",
+            ],
+            "linux_paths": [
+                "/usr/bin/code",
+                "/snap/bin/code",
+            ],
+            "launch_template": ["{path}"],
+            "version_flag": "--version",
+        },
+        {
+            "id": "cursor",
+            "name": "Cursor AI Code Editor",
+            "type": EditorType.CURSOR,
+            "executables": ["cursor", "cursor.cmd", "cursor.exe"],
+            "windows_paths": [
+                r"%LOCALAPPDATA%\Programs\cursor\Cursor.exe",
+                r"%LOCALAPPDATA%\cursor\Cursor.exe",
+                r"%PROGRAMFILES%\Cursor\Cursor.exe",
+            ],
+            "mac_paths": [
+                "/Applications/Cursor.app/Contents/MacOS/Cursor",
+                "/Applications/Cursor.app/Contents/Resources/app/bin/cursor",
+            ],
+            "linux_paths": [
+                "/usr/bin/cursor",
+                "/opt/cursor/cursor",
+            ],
+            "launch_template": ["{path}"],
+            "version_flag": "--version",
+        },
+        {
+            "id": "windsurf",
+            "name": "Windsurf Editor (Codeium)",
+            "type": EditorType.WINDSURF,
+            "executables": ["windsurf", "windsurf.cmd", "windsurf.exe"],
+            "windows_paths": [
+                r"%LOCALAPPDATA%\Programs\windsurf\Windsurf.exe",
+                r"%PROGRAMFILES%\Windsurf\Windsurf.exe",
+            ],
+            "mac_paths": [
+                "/Applications/Windsurf.app/Contents/MacOS/Windsurf",
+            ],
+            "linux_paths": [
+                "/usr/bin/windsurf",
+            ],
+            "launch_template": ["{path}"],
+            "version_flag": "--version",
+        },
+        {
+            "id": "antigravity",
+            "name": "AntiGravity IDE",
+            "type": EditorType.ANTIGRAVITY,
+            "executables": ["antigravity", "antigravity.exe", "agy", "agy.exe"],
+            "windows_paths": [
+                r"%LOCALAPPDATA%\Programs\AntiGravity\AntiGravity.exe",
+                r"%USERPROFILE%\.gemini\antigravity-ide\bin\antigravity.exe",
+            ],
+            "mac_paths": [
+                "/Applications/AntiGravity.app/Contents/MacOS/AntiGravity",
+            ],
+            "linux_paths": [
+                "/usr/local/bin/antigravity",
+            ],
+            "launch_template": ["{path}"],
+            "version_flag": "--version",
+        },
+        {
+            "id": "android_studio",
+            "name": "Android Studio",
+            "type": EditorType.ANDROID_STUDIO,
+            "executables": ["studio", "studio64.exe", "studio.exe", "studio.bat"],
+            "windows_paths": [
+                r"%PROGRAMFILES%\Android\Android Studio\bin\studio64.exe",
+                r"%PROGRAMFILES%\Android\Android Studio\bin\studio.bat",
+                r"%LOCALAPPDATA%\Programs\Android Studio\bin\studio64.exe",
+            ],
+            "mac_paths": [
+                "/Applications/Android Studio.app/Contents/MacOS/studio",
+            ],
+            "linux_paths": [
+                "/opt/android-studio/bin/studio.sh",
+                "/usr/local/android-studio/bin/studio.sh",
+            ],
+            "launch_template": ["{path}"],
+            "version_flag": "--version",
+        },
+        {
+            "id": "intellij",
+            "name": "IntelliJ IDEA",
+            "type": EditorType.INTELLIJ,
+            "executables": ["idea", "idea64.exe", "idea.exe"],
+            "windows_paths": [
+                r"%PROGRAMFILES%\JetBrains\IntelliJ IDEA Community Edition*\bin\idea64.exe",
+                r"%PROGRAMFILES%\JetBrains\IntelliJ IDEA*\bin\idea64.exe",
+            ],
+            "mac_paths": [
+                "/Applications/IntelliJ IDEA.app/Contents/MacOS/idea",
+            ],
+            "linux_paths": [
+                "/usr/bin/idea",
+                "/snap/bin/intellij-idea-community",
+            ],
+            "launch_template": ["{path}"],
+            "version_flag": "--version",
+        },
+        {
+            "id": "pycharm",
+            "name": "PyCharm",
+            "type": EditorType.PYCHARM,
+            "executables": ["pycharm", "pycharm64.exe", "pycharm.exe"],
+            "windows_paths": [
+                r"%PROGRAMFILES%\JetBrains\PyCharm Community Edition*\bin\pycharm64.exe",
+                r"%PROGRAMFILES%\JetBrains\PyCharm*\bin\pycharm64.exe",
+            ],
+            "mac_paths": [
+                "/Applications/PyCharm.app/Contents/MacOS/pycharm",
+            ],
+            "linux_paths": [
+                "/usr/bin/pycharm",
+            ],
+            "launch_template": ["{path}"],
+            "version_flag": "--version",
+        },
+        {
+            "id": "neovim",
+            "name": "Neovim",
+            "type": EditorType.NEOVIM,
+            "executables": ["nvim", "nvim.exe"],
+            "windows_paths": [
+                r"%LOCALAPPDATA%\Programs\Neovim\bin\nvim.exe",
+                r"%PROGRAMFILES%\Neovim\bin\nvim.exe",
+            ],
+            "mac_paths": [
+                "/usr/local/bin/nvim",
+                "/opt/homebrew/bin/nvim",
+            ],
+            "linux_paths": [
+                "/usr/bin/nvim",
+                "/snap/bin/nvim",
+            ],
+            "launch_template": ["{path}"],
+            "version_flag": "--version",
+        },
+    ]
+
+    def __init__(self, custom_overrides: Optional[Dict[str, str]] = None) -> None:
+        self.custom_overrides = custom_overrides or {}
+        self.os_name = platform.system().lower()
+
+    def discover_all(self) -> List[EditorInfo]:
+        """Scan the host system and return all discovered editors."""
+        discovered: List[EditorInfo] = []
+
+        for candidate in self.KNOWN_EDITORS:
+            info = self._check_candidate(candidate)
+            if info:
+                discovered.append(info)
+
+        # Check custom overrides configured by user
+        for custom_id, custom_path in self.custom_overrides.items():
+            if custom_path and (shutil.which(custom_path) or Path(custom_path).is_file()):
+                resolved = shutil.which(custom_path) or str(Path(custom_path).resolve())
+                discovered.append(
+                    EditorInfo(
+                        id=custom_id,
+                        name=f"Custom ({custom_id})",
+                        editor_type=EditorType.CUSTOM,
+                        executable_path=resolved,
+                        is_available=True,
+                        launch_args_template=["{path}"],
+                    )
+                )
+
+        logger.info(f"Discovered {len(discovered)} installed code editors on {platform.system()}")
+        return discovered
+
+    def find_editor(self, editor_id: str) -> Optional[EditorInfo]:
+        """Find a specific editor by identifier."""
+        # 1. Check custom overrides
+        if editor_id in self.custom_overrides:
+            path = self.custom_overrides[editor_id]
+            resolved = shutil.which(path) or (str(Path(path).resolve()) if Path(path).is_file() else None)
+            if resolved:
+                return EditorInfo(
+                    id=editor_id,
+                    name=f"Custom ({editor_id})",
+                    editor_type=EditorType.CUSTOM,
+                    executable_path=resolved,
+                    is_available=True,
+                )
+
+        # 2. Check known candidates
+        for candidate in self.KNOWN_EDITORS:
+            if candidate["id"] == editor_id:
+                return self._check_candidate(candidate)
+
+        # 3. Fallback: try resolving command directly in PATH
+        resolved = shutil.which(editor_id)
+        if resolved:
+            return EditorInfo(
+                id=editor_id,
+                name=editor_id.title(),
+                editor_type=EditorType.CUSTOM,
+                executable_path=resolved,
+                is_available=True,
+            )
+
+        return None
+
+    def _check_candidate(self, candidate: Dict) -> Optional[EditorInfo]:
+        """Check if an editor candidate exists via PATH or standard directories."""
+        # 1. Check PATH
+        for exe in candidate["executables"]:
+            found = shutil.which(exe)
+            if found:
+                version = self._get_version(found, candidate.get("version_flag"))
+                return EditorInfo(
+                    id=candidate["id"],
+                    name=candidate["name"],
+                    editor_type=candidate["type"],
+                    executable_path=found,
+                    version=version,
+                    launch_args_template=candidate.get("launch_template", ["{path}"]),
+                    is_available=True,
+                )
+
+        # 2. Check OS-specific standard directories
+        paths_to_check: List[str] = []
+        if self.os_name == "windows":
+            paths_to_check = candidate.get("windows_paths", [])
+        elif self.os_name == "darwin":
+            paths_to_check = candidate.get("mac_paths", [])
+        else:
+            paths_to_check = candidate.get("linux_paths", [])
+
+        for p_str in paths_to_check:
+            expanded = os.path.expandvars(p_str)
+            # Handle glob patterns if needed (e.g. IntelliJ*)
+            if "*" in expanded:
+                import glob
+                matches = glob.glob(expanded)
+                if matches and Path(matches[0]).is_file():
+                    target_path = matches[0]
+                    version = self._get_version(target_path, candidate.get("version_flag"))
+                    return EditorInfo(
+                        id=candidate["id"],
+                        name=candidate["name"],
+                        editor_type=candidate["type"],
+                        executable_path=target_path,
+                        version=version,
+                        launch_args_template=candidate.get("launch_template", ["{path}"]),
+                        is_available=True,
+                    )
+            elif Path(expanded).is_file():
+                version = self._get_version(expanded, candidate.get("version_flag"))
+                return EditorInfo(
+                    id=candidate["id"],
+                    name=candidate["name"],
+                    editor_type=candidate["type"],
+                    executable_path=expanded,
+                    version=version,
+                    launch_args_template=candidate.get("launch_template", ["{path}"]),
+                    is_available=True,
+                )
+
+        return None
+
+    def _get_version(self, executable: str, flag: Optional[str]) -> Optional[str]:
+        """Attempt to extract version string from executable without blocking."""
+        if not flag:
+            return None
+        try:
+            res = subprocess.run(
+                [executable, flag],
+                capture_output=True,
+                text=True,
+                timeout=2.0,
+                creationflags=subprocess.CREATE_NO_WINDOW if platform.system() == "Windows" else 0,
+            )
+            if res.returncode == 0 and res.stdout.strip():
+                lines = res.stdout.strip().splitlines()
+                return lines[0].strip()
+        except Exception:
+            pass
+        return None
