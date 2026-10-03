@@ -134,3 +134,39 @@ Synapr is an operating-system-level developer orchestration platform. It transfo
   - Resolver generates clean, merged source code.
   - Test suites are re-executed against the resolved tree to prevent regressions.
   - Merges are committed automatically upon passing tests, or safely aborted if unresolvable.
+
+### 8. Configuration Core & Visual Configurator (`synapr.config`, `synapr.core.config_service`, `synapr.web`)
+
+```text
+   defaults (pydantic models)
+            │
+            ▼
+   synapr.config.json ──► SynaprConfig.load() ──► .env ──► SYNAPR_* environment
+            │                      │
+            │                      ▼
+            │              ConfigMeta (source file, env overrides, pre-env values, errors)
+            │                      │
+            ▼                      ▼
+   ConfigService ──► schema() ──► /api/config/schema ──► dashboard form (auto-generated)
+        │  ▲                │
+        │  └── update()/set_value()/apply_env_values()/reset()/reload()
+        │
+        └── listeners ──► SynaprOrchestrator.apply_config() (hot sub-system rebuild)
+```
+
+* **`synapr/config.py`** owns the schema (`GatewayConfig`, `WorktreeConfig`, `EditorConfig`,
+  `PerceptionConfig`, `PipelineConfig`, `UIConfig`) *and* the declarative environment registry
+  (`ENV_VAR_SPECS`), so a field, its validation rules, its env variable and its dashboard widget all
+  come from one definition. Assignment is validated (`validate_assignment=True`), unknown keys in a
+  config file are ignored for forward/backward compatibility, and saves are atomic.
+* **Provenance tracking** (`ConfigMeta`) records which values came from the environment so they can
+  be displayed as locked in the UI and deliberately excluded when persisting the file.
+* **`ConfigService`** is the thread-safe process-wide holder used by the CLI, the orchestrator and
+  the dashboard. Mutations notify listeners; the web layer rebuilds the orchestrator in place.
+* **Secret hygiene:** API keys are redacted (`••••••••1234`) in every response, schema payload, log
+  line and CLI output; the masked placeholder is ignored on write-back so a save can never destroy
+  a key. Config files containing secrets are written with `0600` permissions on POSIX hosts.
+* **Dashboard assets** live in `synapr/web/static/` and are 100% local — no CDN, no web fonts, no
+  external telemetry — enforced by a CI check.
+* **Outbound HTTP** is funnelled through `synapr/core/http.py`, which enforces an `http(s)`-only
+  scheme allow-list so a tampered base URL cannot be turned into a local file read.

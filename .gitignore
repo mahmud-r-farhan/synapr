@@ -8,18 +8,24 @@ dist/
 build/
 *.egg-info/
 
-# Unit test / coverage
+# Unit test / coverage / tooling caches
 .pytest_cache/
 .coverage
+coverage.xml
 htmlcov/
+.mypy_cache/
+.ruff_cache/
 
 # Synapr Worktrees and Run Data
 .worktrees/
 .synapr/
 *.log
 
-# Environments
+# Environments (local secrets - never commit; .env.example is tracked on purpose)
 .env
+.env.local
+.env.*.local
+!.env.example
 .venv
 env/
 venv/
