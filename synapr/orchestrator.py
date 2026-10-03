@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any
 
 from synapr.config import SynaprConfig
+from synapr.core.config_service import get_config_service
 from synapr.core.events import bus
 from synapr.core.logger import logger
 from synapr.core.models import (
@@ -32,10 +33,18 @@ class SynaprOrchestrator:
     """Master operating coordinator for autonomous multi-IDE software development."""
 
     def __init__(self, config: SynaprConfig | None = None, repo_root: str | None = None) -> None:
-        self.config = config or SynaprConfig.load()
+        self.config = config or get_config_service().config
         self.repo_root = Path(repo_root or ".").resolve()
 
-        # Initialize sub-systems
+        # Active state (declared before sub-systems so apply_config can reuse them)
+        self.active_plan: ExecutionPlan | None = None
+        self.active_worktrees: dict[str, WorktreeInstance] = {}
+        self.task_results: dict[str, dict[str, Any]] = {}
+
+        self._build_subsystems()
+
+    def _build_subsystems(self) -> None:
+        """(Re)create every sub-system from the current configuration."""
         self.gateway = LLMGateway(self.config.gateway)
         self.router = ModelRouter(self.config.gateway)
 
@@ -50,10 +59,18 @@ class SynaprOrchestrator:
         self.test_pipeline = TestPipeline(self.config.pipeline.default_test_command)
         self.resolver = SelfHealingResolver(str(self.repo_root), self.router, self.test_pipeline)
 
-        # Active state
-        self.active_plan: ExecutionPlan | None = None
-        self.active_worktrees: dict[str, WorktreeInstance] = {}
-        self.task_results: dict[str, dict[str, Any]] = {}
+    def apply_config(self, config: SynaprConfig) -> None:
+        """Hot-swap the configuration and rebuild sub-systems without losing state.
+
+        Called by the visual configurator so settings edited in the dashboard take
+        effect immediately, without restarting the process.
+        """
+        self.config = config
+        self._build_subsystems()
+        logger.info(
+            "Configuration reloaded: provider="
+            f"{config.gateway.default_provider}, worktree_root={config.worktree.worktree_root}"
+        )
 
     def get_installed_editors(self) -> list[EditorInfo]:
         """Return list of detected development tools."""
@@ -114,7 +131,7 @@ class SynaprOrchestrator:
         # 2. Perception & Telemetry check (brief inspection)
         if self.config.perception.enabled:
             logger.info("--- [Phase 4: Optical Window Perception & Telemetry] ---")
-            for task, wt in provisioned:
+            for task, _wt in provisioned:
                 perception_res = await self.perception.inspect_task_window(task.id, task.target_editor)
                 logger.debug(
                     f"Perception report for {task.id}: found={perception_res.window_found}, "
