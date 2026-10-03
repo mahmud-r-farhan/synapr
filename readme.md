@@ -117,7 +117,7 @@ Modern AI coding agents usually work inside a single terminal window or a single
 ### 1. Installation
 Clone the repository and install with pip:
 ```bash
-git clone https://github.com/synapr/synapr.git
+git clone https://github.com/mahmud-r-farhan/synapr
 cd synapr
 pip install -e .
 ```
