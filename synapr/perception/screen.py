@@ -55,9 +55,11 @@ class WindowInspector:
     def _find_windows_win32(self, targets: list[str]) -> list[WindowInfo]:
         """Enumerate top-level Windows GUI windows using User32 ctypes."""
         results: list[WindowInfo] = []
-        user32 = ctypes.windll.user32
+        user32 = ctypes.windll.user32  # type: ignore[attr-defined]  # Windows-only API
 
-        WNDENUMPROC = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_void_p)
+        WNDENUMPROC = ctypes.WINFUNCTYPE(  # type: ignore[attr-defined]  # Windows-only API
+            ctypes.c_bool, ctypes.c_void_p, ctypes.c_void_p
+        )
 
         def enum_windows_callback(hwnd: Any, extra: Any) -> bool:
             if not user32.IsWindowVisible(hwnd):
@@ -116,8 +118,8 @@ class ScreenCapturer:
 
     def _capture_win32_window(self, hwnd: int, filepath: str) -> bool:
         """Native Windows PrintWindow / BitBlt capture via ctypes."""
-        user32 = ctypes.windll.user32
-        gdi32 = ctypes.windll.gdi32
+        user32 = ctypes.windll.user32  # type: ignore[attr-defined]  # Windows-only API
+        gdi32 = ctypes.windll.gdi32  # type: ignore[attr-defined]  # Windows-only API
 
         rect = (ctypes.c_long * 4)()
         user32.GetWindowRect(hwnd, ctypes.byref(rect))

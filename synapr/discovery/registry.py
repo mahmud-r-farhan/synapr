@@ -19,6 +19,11 @@ class EditorRegistry:
         items = self.detector.discover_all()
         self._editors = {e.id: e for e in items}
 
+    def refresh(self) -> list[EditorInfo]:
+        """Re-scan the host machine and return the refreshed editor list."""
+        self._refresh()
+        return self.list_available()
+
     def list_available(self) -> list[EditorInfo]:
         """Return all discovered and available editors."""
         return list(self._editors.values())

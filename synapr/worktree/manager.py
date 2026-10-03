@@ -41,8 +41,8 @@ class WorktreeManager:
                 err_msg = stderr.decode("utf-8", errors="replace").strip()
                 raise GitWorktreeError(f"Git command failed: {' '.join(cmd)}\nError: {err_msg}")
             return stdout.decode("utf-8", errors="replace").strip()
-        except FileNotFoundError:
-            raise GitWorktreeError("Git executable not found in PATH.")
+        except FileNotFoundError as exc:
+            raise GitWorktreeError("Git executable not found in PATH.") from exc
 
     async def detect_base_branch(self) -> str:
         """Detect current active repository branch (e.g. master or main)."""

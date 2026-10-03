@@ -304,7 +304,11 @@ class EditorDetector:
                 capture_output=True,
                 text=True,
                 timeout=2.0,
-                creationflags=subprocess.CREATE_NO_WINDOW if platform.system() == "Windows" else 0,
+                creationflags=(
+                    subprocess.CREATE_NO_WINDOW  # type: ignore[attr-defined]  # Windows-only flag
+                    if platform.system() == "Windows"
+                    else 0
+                ),
             )
             if res.returncode == 0 and res.stdout.strip():
                 lines = res.stdout.strip().splitlines()

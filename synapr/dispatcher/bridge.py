@@ -103,7 +103,10 @@ class TaskDispatcher:
         # Configure cross-platform detachment flags
         flags = 0
         if detached and platform.system() == "Windows":
-            flags = subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
+            flags = (
+                subprocess.DETACHED_PROCESS  # type: ignore[attr-defined]  # Windows-only flag
+                | subprocess.CREATE_NEW_PROCESS_GROUP  # type: ignore[attr-defined]
+            )
         elif detached:
             flags = 0
 
@@ -114,7 +117,7 @@ class TaskDispatcher:
                 creationflags=flags,
                 stdout=subprocess.DEVNULL if detached else None,
                 stderr=subprocess.DEVNULL if detached else None,
-                close_fds=True if platform.system() != "Windows" else False,
+                close_fds=platform.system() != "Windows",
             )
             self._spawned_processes[task.id] = proc
             worktree.process_pid = proc.pid
@@ -132,11 +135,11 @@ class TaskDispatcher:
             return proc.pid
         except Exception as e:
             logger.error(f"Failed to launch editor {editor_info.name}: {e}")
-            raise DispatcherError(f"Could not launch editor {editor_info.name}: {e}")
+            raise DispatcherError(f"Could not launch editor {editor_info.name}: {e}") from e
 
     def terminate_all(self) -> None:
         """Terminate all active spawned editor processes."""
-        for task_id, proc in list(self._spawned_processes.items()):
+        for proc in list(self._spawned_processes.values()):
             try:
                 proc.terminate()
             except Exception:
