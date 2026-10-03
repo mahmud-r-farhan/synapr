@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, get_args
+from typing import Any, get_args
 
 from pydantic import BaseModel
 
@@ -91,13 +91,10 @@ def _humanise(name: str) -> str:
 
 
 class ConfigServiceSchemaMixin:
-    if TYPE_CHECKING:
-        @property
-        def config(self) -> SynaprConfig: ...
-
     def schema(self, editor_ids: list[str] | None = None) -> dict[str, Any]:
         """Return a declarative form description for the visual configurator."""
-        cfg = self.config
+        service: Any = self
+        cfg = service.config
         env_overrides = cfg.meta.env_overrides
         sections: list[dict[str, Any]] = []
 

@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 from collections.abc import Callable, Iterable
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from synapr.config import (
     ENV_SPECS_BY_PATH,
@@ -21,10 +21,6 @@ from synapr.core.logger import logger
 
 
 class ConfigServiceEnvironmentMixin:
-    if TYPE_CHECKING:
-        @property
-        def config(self) -> SynaprConfig: ...
-
     _base_dir: Path
     _config: SynaprConfig
     _lock: Any
@@ -32,7 +28,8 @@ class ConfigServiceEnvironmentMixin:
 
     def env_report(self) -> list[dict[str, Any]]:
         """Describe every supported environment variable and whether it is active."""
-        return env_var_report(self.config)
+        service: Any = self
+        return env_var_report(service.config)
 
     def apply_env_values(
         self,

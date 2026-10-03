@@ -7,6 +7,9 @@ from .search_providers import search_duckduckgo, search_searxng, search_web
 
 __all__ = [
     "DEFAULT_USER_AGENT",
+    "_DuckDuckGoHTMLParser",
+    "_HTMLTextExtractor",
+    "_unwrap_ddg_url",
     "fetch_webpage",
     "search_duckduckgo",
     "search_searxng",

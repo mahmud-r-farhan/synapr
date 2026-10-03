@@ -28,6 +28,23 @@ from synapr.web.routes import config, core, dashboard, events, github, mail, res
 from synapr.web.settings import LOCAL_ORIGIN_REGEX, STATIC_DIR
 from synapr.web.state import get_orchestrator
 
+__all__ = [
+    "app",
+    "ConfigUpdateRequest",
+    "ConfigValueRequest",
+    "EmailDraftRequest",
+    "EmailSendRequest",
+    "EnvUpdateRequest",
+    "FetchUrlRequest",
+    "GoalRequest",
+    "LocalhostValidateRequest",
+    "ProviderTestRequest",
+    "SearchRequest",
+    "WorktreeActionRequest",
+    "DASHBOARD_HTML",
+    "load_dashboard_html",
+]
+
 app = FastAPI(
     title="Synapr Swarm Orchestrator",
     version=__version__,

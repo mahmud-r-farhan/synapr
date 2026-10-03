@@ -6,7 +6,7 @@ import json
 import os
 import tempfile
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any, Self
 
 from .constants import SECRET_MASK
 from .env_file import _harden_permissions
@@ -14,12 +14,9 @@ from .env_registry import ENV_VAR_SPECS
 from .metadata import ConfigMeta
 from .values import deep_merge, get_by_path, redact_secret
 
-if TYPE_CHECKING:
-    from .model import SynaprConfig
-
 
 class ConfigSerializationMixin:
-    def apply_updates(self, updates: dict[str, Any]) -> SynaprConfig:
+    def apply_updates(self, updates: dict[str, Any]) -> Self:
         """Return a new validated configuration with ``updates`` deep-merged in.
 
         Masked secret placeholders coming back from the UI are ignored so that

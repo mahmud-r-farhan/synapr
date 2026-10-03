@@ -5,6 +5,8 @@ from typing import Any
 from synapr.cli import commands as _commands  # noqa: F401 - registers command groups
 from synapr.cli.app import _orchestrator, _service, main  # noqa: F401 - compatibility exports
 
+__all__ = ["_orchestrator", "_service", "main"]
+
 _COMMAND_MODULES = tuple(
     getattr(_commands, name)
     for name in ("core", "config", "research", "github", "mail", "dashboard")

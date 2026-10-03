@@ -23,6 +23,8 @@ from synapr.planner.consensus import ConsensusEngine
 from synapr.planner.decomposer import TaskDecomposer
 from synapr.worktree.manager import WorktreeManager
 
+__all__ = ["SynaprOrchestrator", "Tuple_TaskWorktree", "bus"]
+
 
 class SynaprOrchestrator(PlanExecutionMixin):
     """Master operating coordinator for autonomous multi-IDE software development."""
@@ -72,7 +74,7 @@ class SynaprOrchestrator(PlanExecutionMixin):
 
     async def plan_goal(self, goal: str, context: str | None = None) -> ExecutionPlan:
         """Decompose a high-level goal and verify through multi-LLM debate."""
-        logger.info(f"--- [Phase 1: Planning & Decomposition] --- Goal: '{goal}'")
+        logger.info("--- [Phase 1: Planning & Decomposition] ---")
         subtasks = await self.decomposer.decompose(goal, context)
 
         logger.info("--- [Phase 2: Multi-LLM Consensus Debate] ---")

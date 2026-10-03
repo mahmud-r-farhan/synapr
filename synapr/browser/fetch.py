@@ -26,7 +26,8 @@ def fetch_webpage(url: str, max_chars: int = 12000, timeout: float = 15.0) -> We
 
     try:
         req = urllib.request.Request(url, headers=headers)
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
+        # validate_url() restricts this outbound request to HTTP(S).
+        with urllib.request.urlopen(req, timeout=timeout) as resp:  # nosec B310
             status_code = resp.getcode()
             content = resp.read().decode("utf-8", errors="replace")
 

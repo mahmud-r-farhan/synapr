@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import os
-from typing import TYPE_CHECKING, Any, cast
+from typing import Any, Self, cast
 
 from pydantic import BaseModel
 
@@ -11,29 +11,17 @@ from .env_registry import ENV_SPECS_BY_PATH, ENV_VAR_SPECS
 from .metadata import ConfigMeta
 from .values import coerce_env_value, get_by_path, set_by_path
 
-if TYPE_CHECKING:
-    from .model import SynaprConfig
-    from .models import GatewayConfig
-
 
 class ConfigEnvironmentMixin:
-    if TYPE_CHECKING:
-        @property
-        def meta(self) -> ConfigMeta: ...
-
-        @meta.setter
-        def meta(self, value: ConfigMeta) -> None: ...
-
-        gateway: GatewayConfig
-
     def apply_env(
         self,
         environ: dict[str, str] | None = None,
         *,
         meta: ConfigMeta | None = None,
-    ) -> SynaprConfig:
+    ) -> Self:
         """Apply every environment variable declared in :data:`ENV_VAR_SPECS`."""
-        target_meta = meta if meta is not None else self.meta
+        config: Any = self
+        target_meta = meta if meta is not None else config.meta
         env = environ if environ is not None else dict(os.environ)
         provider_explicit = False
 
@@ -74,17 +62,17 @@ class ConfigEnvironmentMixin:
         # Legacy convenience: an OpenAI key alone promotes the provider away from mock.
         if (
             not provider_explicit
-            and self.gateway.default_provider == "mock"
+            and config.gateway.default_provider == "mock"
             and (env.get("OPENAI_API_KEY") or env.get("SYNAPR_OPENAI_API_KEY"))
         ):
             target_meta.pre_env_values.setdefault(
-                "gateway.default_provider", self.gateway.default_provider
+                "gateway.default_provider", config.gateway.default_provider
             )
-            self.gateway.default_provider = "openai"
+            config.gateway.default_provider = "openai"
             target_meta.env_overrides["gateway.default_provider"] = (
                 "OPENAI_API_KEY" if env.get("OPENAI_API_KEY") else "SYNAPR_OPENAI_API_KEY"
             )
 
         if meta is None:
-            self.meta = target_meta
-        return cast(Any, self)
+            config.meta = target_meta
+        return self

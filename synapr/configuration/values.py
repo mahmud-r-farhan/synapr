@@ -7,7 +7,7 @@ from typing import Any, Literal, get_args, get_origin
 
 from pydantic import BaseModel
 
-from .constants import _FALSY, _TRUTHY, SECRET_MASK
+from .constants import FALSY_VALUES, SECRET_MASK, TRUTHY_VALUES
 
 
 def redact_secret(value: str | None) -> str | None:
@@ -23,9 +23,9 @@ def coerce_env_value(kind: str, raw: str) -> Any:
     text = raw.strip()
     if kind == "bool":
         lowered = text.lower()
-        if lowered in _TRUTHY:
+        if lowered in TRUTHY_VALUES:
             return True
-        if lowered in _FALSY:
+        if lowered in FALSY_VALUES:
             return False
         raise ValueError(f"Expected a boolean value, received {raw!r}")
     if kind == "int":

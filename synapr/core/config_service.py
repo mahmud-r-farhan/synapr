@@ -26,7 +26,15 @@ from synapr.core.config_service_support import (  # noqa: F401
 
 __all__ = [
     "ConfigService",
+    "ConfigServiceDiagnosticsMixin",
     "ConfigServiceError",
+    "ConfigServiceSchemaMixin",
+    "SECTION_META",
+    "SELECT_OPTIONS",
+    "_constraints",
+    "_extract_model_names",
+    "_format_validation_error",
+    "_humanise",
     "get_config_service",
     "reset_config_service",
     "set_config_service",

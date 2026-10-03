@@ -4,22 +4,16 @@ from __future__ import annotations
 
 import time
 import urllib.error
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from synapr.core.http import request_json
 
-if TYPE_CHECKING:
-    from synapr.config import SynaprConfig
-
 
 class ConfigServiceDiagnosticsMixin:
-    if TYPE_CHECKING:
-        @property
-        def config(self) -> SynaprConfig: ...
-
     def test_provider(self, provider: str | None = None, timeout: float = 8.0) -> dict[str, Any]:
         """Probe the configured provider endpoint and report reachability."""
-        cfg = self.config
+        service: Any = self
+        cfg = service.config
         target = (provider or cfg.gateway.default_provider).lower()
         started = time.perf_counter()
 

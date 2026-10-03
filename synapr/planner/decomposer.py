@@ -51,7 +51,7 @@ class TaskDecomposer:
             user_prompt += f"Context:\n{context}\n"
         user_prompt += "Generate the decoupled task execution plan in JSON format."
 
-        logger.info(f"Decomposing goal: {goal}")
+        logger.info("Decomposing a user-provided goal.")
         response = await self.gateway.complete(
             prompt=user_prompt,
             system_prompt=self.SYSTEM_PROMPT,

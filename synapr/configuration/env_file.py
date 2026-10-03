@@ -85,4 +85,5 @@ def _harden_permissions(path: Path) -> None:
     try:
         path.chmod(stat.S_IRUSR | stat.S_IWUSR)
     except OSError:
+        # Permission hardening is best-effort on restricted or unusual filesystems.
         pass

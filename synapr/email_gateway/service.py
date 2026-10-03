@@ -12,6 +12,8 @@ from synapr.email_gateway.models import EmailDraft, EmailMessage, EmailTriageRes
 from synapr.email_gateway.sample_data import DEFAULT_SAMPLE_MESSAGES as DEFAULT_SAMPLE_MESSAGES
 from synapr.email_gateway.storage import EmailStorage
 
+__all__ = ["DEFAULT_SAMPLE_MESSAGES", "EmailGatewayService"]
+
 
 class EmailGatewayService:
     """Manages email triage, prompt extraction, and safe response drafting."""

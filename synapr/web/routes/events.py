@@ -22,10 +22,7 @@ async def stream_events(request: Request) -> StreamingResponse:
         q: asyncio.Queue[Event] = asyncio.Queue()
 
         def _on_event(ev: Event) -> None:
-            try:
-                q.put_nowait(ev)
-            except Exception:
-                pass
+            q.put_nowait(ev)
 
         bus.subscribe("*", _on_event)
         try:

@@ -7,6 +7,7 @@ import urllib.parse
 import urllib.request
 
 from synapr.browser.models import SearchResult
+from synapr.core.http import validate_url
 from synapr.core.logger import logger
 
 from .constants import DEFAULT_USER_AGENT
@@ -25,8 +26,10 @@ def search_duckduckgo(query: str, max_results: int = 5, timeout: float = 12.0) -
     }
 
     try:
+        validate_url(url)
         req = urllib.request.Request(url, headers=headers)
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
+        # validate_url() restricts this outbound request to HTTP(S).
+        with urllib.request.urlopen(req, timeout=timeout) as resp:  # nosec B310
             content = resp.read().decode("utf-8", errors="replace")
 
         parser = _DuckDuckGoHTMLParser()
@@ -40,8 +43,10 @@ def search_duckduckgo(query: str, max_results: int = 5, timeout: float = 12.0) -
     # Fallback: DuckDuckGo Instant Answer API
     try:
         api_url = f"https://api.duckduckgo.com/?q={urllib.parse.quote(query)}&format=json&no_html=1&skip_disambig=1"
+        validate_url(api_url)
         req = urllib.request.Request(api_url, headers=headers)
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
+        # validate_url() restricts this outbound request to HTTP(S).
+        with urllib.request.urlopen(req, timeout=timeout) as resp:  # nosec B310
             data = json.loads(resp.read().decode("utf-8", errors="replace"))
 
         fallback_results: list[SearchResult] = []
@@ -83,8 +88,10 @@ def search_searxng(
     url = f"{target_url.rstrip('/')}/search?q={urllib.parse.quote(query)}&format=json"
     headers = {"User-Agent": DEFAULT_USER_AGENT, "Accept": "application/json"}
     try:
+        validate_url(url)
         req = urllib.request.Request(url, headers=headers)
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
+        # validate_url() restricts this outbound request to HTTP(S).
+        with urllib.request.urlopen(req, timeout=timeout) as resp:  # nosec B310
             data = json.loads(resp.read().decode("utf-8", errors="replace"))
         results: list[SearchResult] = []
         for item in data.get("results", [])[:max_results]:
