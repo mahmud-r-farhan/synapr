@@ -29,16 +29,33 @@ BUILD = ROOT / "build"
 VERSION = "0.1.0"
 
 
+# Windows consoles default to a legacy code page (e.g. cp1252); force UTF-8 with replacement
+# so status glyphs or subprocess output never raise UnicodeEncodeError.
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[union-attr]
+    except (AttributeError, ValueError):
+        pass
+
+# Force UTF-8 in child processes (PyInstaller, dpkg, ISCC, git)
+ENV = {
+    **os.environ,
+    "PYTHONUTF8": "1",
+    "PYTHONIOENCODING": "utf-8",
+    "PYTHONUNBUFFERED": "1",
+}
+
+
 def log(msg: str) -> None:
-    print(f"\033[94m▶ [BUILD]\033[0m {msg}", flush=True)
+    print(f"\033[94m> [BUILD]\033[0m {msg}", flush=True)
 
 
 def ok(msg: str) -> None:
-    print(f"  \033[92m✔\033[0m {msg}", flush=True)
+    print(f"  \033[92m+ [OK]\033[0m {msg}", flush=True)
 
 
 def warn(msg: str) -> None:
-    print(f"  \033[93m⚠\033[0m {msg}", flush=True)
+    print(f"  \033[93m! [WARN]\033[0m {msg}", flush=True)
 
 
 def run_pyinstaller() -> Path:
@@ -49,7 +66,7 @@ def run_pyinstaller() -> Path:
         raise FileNotFoundError(f"Spec file not found at {spec_path}")
 
     cmd = [sys.executable, "-m", "PyInstaller", str(spec_path), "--noconfirm"]
-    subprocess.check_call(cmd, cwd=str(ROOT))
+    subprocess.check_call(cmd, cwd=str(ROOT), env=ENV)
     app_dir = DIST / "synapr"
     if not app_dir.is_dir():
         raise RuntimeError(f"Expected PyInstaller output directory at {app_dir}")
@@ -84,8 +101,8 @@ def package_windows(app_dir: Path, build_installer: bool = True) -> list[Path]:
         iscc = shutil.which("iscc") or r"C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
         if os.path.exists(iscc) and iss_path.is_file():
             log(f"Compiling Inno Setup installer with {iscc}...")
-            cmd = [str(iscc), str(iss_path)]
-            subprocess.check_call(cmd, cwd=str(ROOT))
+            cmd = [iscc, str(iss_path)]
+            subprocess.check_call(cmd, cwd=str(ROOT), env=ENV)
             installer_path = DIST / "Synapr-Setup-x64.exe"
             target_installer = DIST / f"Synapr-Setup-x64-v{VERSION}.exe"
             if installer_path.is_file():
@@ -178,7 +195,7 @@ def package_linux(app_dir: Path, build_deb: bool = True) -> list[Path]:
         (debian_dir / "control").write_text(control_content, encoding="utf-8")
 
         deb_output = DIST / f"synapr_{VERSION}_{arch}.deb"
-        subprocess.check_call(["dpkg-deb", "--build", str(deb_root), str(deb_output)])
+        subprocess.check_call(["dpkg-deb", "--build", str(deb_root), str(deb_output)], env=ENV)
         ok(f"Created Debian package: {deb_output.name} ({deb_output.stat().st_size:,} bytes)")
         artifacts.append(deb_output)
 
@@ -225,7 +242,7 @@ def main() -> None:
 
     log("\nDistribution artifacts ready in dist/:")
     for artifact in created:
-        print(f"  • {artifact.name} ({artifact.stat().st_size:,} bytes)")
+        print(f"  * {artifact.name} ({artifact.stat().st_size:,} bytes)")
 
 
 if __name__ == "__main__":

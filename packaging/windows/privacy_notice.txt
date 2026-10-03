@@ -2,7 +2,7 @@
 SYNAPR: LOCAL AIR-GAP & ZERO DATA LEAK GUARANTEE
 ================================================================================
 
-Welcome to Synapr — the Autonomous Local Multi-IDE AI Development Orchestrator.
+Welcome to Synapr -- the Autonomous Local Multi-IDE AI Development Orchestrator.
 
 1. 100% Local Machine Execution
    Synapr is architected from the core to operate entirely on your local
@@ -11,10 +11,10 @@ Welcome to Synapr — the Autonomous Local Multi-IDE AI Development Orchestrator
    locally on your system.
 
 2. Zero Data Leak & Zero Telemetry Collection
-   • Synapr DOES NOT collect, store, or transmit your source code.
-   • Synapr DOES NOT collect user analytics, tracking cookies, or telemetry.
-   • The web dashboard is 100% local: no external fonts, scripts, or CDNs.
-   • Outbound network traffic is strictly isolated to the LLM endpoints
+   - Synapr DOES NOT collect, store, or transmit your source code.
+   - Synapr DOES NOT collect user analytics, tracking cookies, or telemetry.
+   - The web dashboard is 100% local: no external fonts, scripts, or CDNs.
+   - Outbound network traffic is strictly isolated to the LLM endpoints
      that you explicitly configure in the Gateway settings.
 
 3. Complete Ownership & Security

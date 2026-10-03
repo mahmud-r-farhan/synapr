@@ -24,6 +24,7 @@ import time
 import urllib.error
 import urllib.request
 from pathlib import Path
+from typing import Any
 
 TIMEOUT = 90.0
 
@@ -44,11 +45,11 @@ class SmokeFailure(RuntimeError):
 
 
 def step(message: str) -> None:
-    print(f"\n\033[95m▶ {message}\033[0m", flush=True)
+    print(f"\n\033[95m> {message}\033[0m", flush=True)
 
 
 def ok(message: str) -> None:
-    print(f"  \033[92m✔\033[0m {message}", flush=True)
+    print(f"  \033[92m+ [OK]\033[0m {message}", flush=True)
 
 
 def check(condition: bool, message: str) -> None:
@@ -76,7 +77,7 @@ def run_cli(args: list[str], cwd: Path, expect_success: bool = True) -> str:
     return output
 
 
-def http(method: str, url: str, payload: dict | None = None) -> tuple[int, object]:
+def http(method: str, url: str, payload: dict | None = None) -> tuple[int, Any]:
     data = json.dumps(payload).encode() if payload is not None else None
     request = urllib.request.Request(
         url, data=data, headers={"Content-Type": "application/json"}, method=method
@@ -246,14 +247,14 @@ def main() -> int:
             smoke_cli(workspace)
             smoke_dashboard(workspace, free_port(args.port))
         except SmokeFailure as failure:
-            print(f"\n\033[91m✘ Smoke test failed: {failure}\033[0m", flush=True)
+            print(f"\n\033[91m[FAIL] Smoke test failed: {failure}\033[0m", flush=True)
             return 1
         finally:
             # Detach git worktrees before the directory is removed.
             subprocess.run(
                 ["git", "worktree", "prune"], cwd=str(workspace), capture_output=True, check=False
             )
-    print("\n\033[92m✔ All smoke checks passed\033[0m", flush=True)
+    print("\n\033[92m[OK] All smoke checks passed\033[0m", flush=True)
     return 0
 
 
