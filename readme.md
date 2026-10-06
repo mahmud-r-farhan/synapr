@@ -312,8 +312,3 @@ Continuous integration runs on every push and pull request:
 
 We welcome contributions from the open-source community! Check out [CONTRIBUTING.md](CONTRIBUTING.md) and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) to get started.
 
----
-
-## 📄 License
-
-Synapr is released under the [MIT License](LICENSE).
